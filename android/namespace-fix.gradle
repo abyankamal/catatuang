@@ -1,0 +1,15 @@
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            if (project.android.namespace == null) {
+                def namespace = project.group
+                if (namespace == null || namespace.toString().isEmpty()) {
+                    namespace = project.name
+                }
+                namespace = namespace.toString().replace('-', '_')
+                project.android.namespace = namespace
+            }
+            project.android.compileSdkVersion 35
+        }
+    }
+}
