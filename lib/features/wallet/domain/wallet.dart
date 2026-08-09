@@ -15,6 +15,12 @@ class Wallet {
   @Index()
   late bool isActive;         // Soft delete flag
   
+  @Index()
+  bool isGoal = false;        // Savings goal flag
+
+  double? targetAmount;       // Target amount for savings goal
+  DateTime? targetDate;       // Target deadline date for savings goal
+
   late DateTime createdAt;
   late DateTime updatedAt;
 }

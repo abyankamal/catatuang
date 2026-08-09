@@ -2,8 +2,10 @@ import 'dart:isolate';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/database/database_provider.dart';
+import '../../wallet/domain/wallet.dart';
 import '../domain/transaction.dart';
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
@@ -23,6 +25,7 @@ class MonthlySummary {
 
 class TransactionRepository {
   final Isar _isar;
+  final _uuid = const Uuid();
 
   TransactionRepository(this._isar);
 
@@ -38,6 +41,63 @@ class TransactionRepository {
   /// Watch all transactions stream for real-time aggregation recalculation
   Stream<void> watchTransactionsChanged() {
     return _isar.transactions.watchLazy(fireImmediately: true);
+  }
+
+  /// Menabung ke Tujuan Tabungan menggunakan 3-Transaction Transfer Pattern (AGENTS.md §4)
+  Future<void> allocateSavings({
+    required String sourceWalletSyncId,
+    required String goalWalletSyncId,
+    required double amount,
+    required DateTime date,
+  }) async {
+    final sourceWallet = await _isar.wallets.filter().syncIdEqualTo(sourceWalletSyncId).findFirst();
+    final goalWallet = await _isar.wallets.filter().syncIdEqualTo(goalWalletSyncId).findFirst();
+
+    if (sourceWallet == null || goalWallet == null) {
+      throw Exception('Kantong sumber atau Kantong tujuan tidak ditemukan.');
+    }
+
+    final now = DateTime.now();
+    final groupId = _uuid.v4();
+
+    await _isar.writeTxn(() async {
+      // 1. Potong saldo dompet sumber
+      sourceWallet.balance -= amount;
+      sourceWallet.updatedAt = now;
+      await _isar.wallets.put(sourceWallet);
+
+      // 2. Tambah saldo dompet tujuan tabungan
+      goalWallet.balance += amount;
+      goalWallet.updatedAt = now;
+      await _isar.wallets.put(goalWallet);
+
+      // 3. Buat catatan transaksi TRANSFER_OUT pada dompet sumber
+      final outTx = Transaction()
+        ..syncId = _uuid.v4()
+        ..type = 'TRANSFER_OUT'
+        ..amount = amount
+        ..date = date
+        ..walletSyncId = sourceWalletSyncId
+        ..transactionGroupId = groupId
+        ..description = 'Menabung ke ${goalWallet.name}'
+        ..createdAt = now
+        ..updatedAt = now;
+
+      // 4. Buat catatan transaksi TRANSFER_IN pada dompet tujuan
+      final inTx = Transaction()
+        ..syncId = _uuid.v4()
+        ..type = 'TRANSFER_IN'
+        ..amount = amount
+        ..date = date
+        ..walletSyncId = goalWalletSyncId
+        ..transactionGroupId = groupId
+        ..description = 'Tabungan dari ${sourceWallet.name}'
+        ..createdAt = now
+        ..updatedAt = now;
+
+      await _isar.transactions.put(outTx);
+      await _isar.transactions.put(inTx);
+    });
   }
 
   /// Calculate monthly total income and expense off-main-thread using Isolate.run()

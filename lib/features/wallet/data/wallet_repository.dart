@@ -24,12 +24,58 @@ class WalletRepository {
         .watch(fireImmediately: true);
   }
 
+  /// Watch kantong reguler aktif (isActive == true && isGoal == false)
+  Stream<List<Wallet>> watchActiveRegularWallets() {
+    return _isar.wallets
+        .filter()
+        .isActiveEqualTo(true)
+        .and()
+        .isGoalEqualTo(false)
+        .watch(fireImmediately: true);
+  }
+
+  /// Watch semua tujuan tabungan aktif (isActive == true && isGoal == true)
+  Stream<List<Wallet>> watchActiveGoals() {
+    return _isar.wallets
+        .filter()
+        .isActiveEqualTo(true)
+        .and()
+        .isGoalEqualTo(true)
+        .watch(fireImmediately: true);
+  }
+
   /// Ambil semua kantong aktif secara synchronous / async
   Future<List<Wallet>> getActiveWallets() async {
     return await _isar.wallets
         .filter()
         .isActiveEqualTo(true)
         .findAll();
+  }
+
+  /// Buat Tujuan Tabungan (Savings Goal) baru
+  Future<Wallet> createGoal({
+    required String name,
+    required double targetAmount,
+    DateTime? targetDate,
+    double initialBalance = 0.0,
+  }) async {
+    final now = DateTime.now();
+    final goal = Wallet()
+      ..syncId = _uuid.v4()
+      ..name = name
+      ..balance = initialBalance
+      ..targetAmount = targetAmount
+      ..targetDate = targetDate
+      ..isGoal = true
+      ..isActive = true
+      ..createdAt = now
+      ..updatedAt = now;
+
+    await _isar.writeTxn(() async {
+      await _isar.wallets.put(goal);
+    });
+
+    return goal;
   }
 
   /// Inisialisasi wallet default ("Dompet Utama") jika database masih kosong
@@ -42,6 +88,7 @@ class WalletRepository {
           ..syncId = _uuid.v4()
           ..name = 'Dompet Utama'
           ..balance = 0.0
+          ..isGoal = false
           ..isActive = true
           ..createdAt = now
           ..updatedAt = now;
