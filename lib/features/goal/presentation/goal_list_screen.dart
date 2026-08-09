@@ -91,10 +91,7 @@ class GoalListScreen extends ConsumerWidget {
         const SizedBox(height: 4),
         Text(
           'Wujudkan impianmu pelan-pelan',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
         ),
       ],
     );
@@ -216,17 +213,26 @@ class _GoalCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: progress >= 1.0 ? Colors.green.shade50 : AppColors.tertiary.withAlpha(25),
+                    color: progress >= 1.0
+                        ? Colors.green.shade50
+                        : AppColors.tertiary.withAlpha(25),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    progress >= 1.0 ? 'Tercapai' : '${(progress * 100).toStringAsFixed(0)}%',
+                    progress >= 1.0
+                        ? 'Tercapai'
+                        : '${(progress * 100).toStringAsFixed(0)}%',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: progress >= 1.0 ? Colors.green.shade700 : AppColors.tertiary,
+                      color: progress >= 1.0
+                          ? Colors.green.shade700
+                          : AppColors.tertiary,
                     ),
                   ),
                 ),
@@ -265,7 +271,7 @@ class _GoalCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Rp ${CurrencyFormatter.format(balance)}',
+                        CurrencyFormatter.format(balance),
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -291,7 +297,7 @@ class _GoalCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Rp ${CurrencyFormatter.format(target)}',
+                        CurrencyFormatter.format(target),
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -313,7 +319,11 @@ class _GoalCard extends StatelessWidget {
                 if (goal.targetDate != null)
                   Row(
                     children: [
-                      Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey.shade500),
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        size: 14,
+                        color: Colors.grey.shade500,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         DateFormatter.formatShortDate(goal.targetDate!),
