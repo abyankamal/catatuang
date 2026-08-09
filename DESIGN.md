@@ -3,16 +3,19 @@
 > **Tujuan Dokumen:** Dokumen ini merupakan pangkalan pengetahuan (knowledge base) untuk AI agent dan developer yang mengatur standarisasi antarmuka pengguna (UI), pengalaman pengguna (UX), dan sistem desain (Design System) aplikasi. Patuhi aturan ini agar UI tetap konsisten, responsif, dan memberikan umpan balik yang jelas.
 
 ## 1. TEMA & IDENTITAS VISUAL (COLOR & TYPOGRAPHY)
-- **Color Palette (Semantic):**
-  - `Income` (Pemasukan): Hijau (contoh: `Colors.green.shade700`).
-  - `Expense` (Pengeluaran): Merah (contoh: `Colors.red.shade700`).
-  - `Transfer`: Biru (contoh: `Colors.blue.shade600`).
-  - `Negative Balance`: Merah menyala dengan latar belakang transparan merah (Red Tint) pada kartu Kantong (Wallet) sebagai peringatan agresif tanpa memblokir interaksi.
-  - `Background`: Abu-abu sangat terang (contoh: `Colors.grey.shade50`) untuk menonjolkan elevasi komponen Card.
-- **Typography:** Gunakan `TextTheme` bawaan Material 3. Hindari custom fonts yang berat.
-  - `headlineSmall`/`titleLarge`: Untuk total saldo dan angka utama (Gunakan font weight tebal/bold).
-  - `bodyMedium`: Untuk deskripsi transaksi.
-  - `labelSmall`: Untuk tanggal dan metadata.
+- **Color Palette (Brand & Semantic):**
+  - **Primary**: `#5D5CFF` (Aksen utama, FAB, navigasi aktif, CTA buttons).
+  - **Secondary**: `#0F172A` (Latar belakang gelap, teks judul/headline yang kuat).
+  - **Tertiary**: `#38BDF8` (Aksen pelengkap, elemen interaktif sekunder).
+  - **Neutral / Background**: `#F8F9FA` (Warna dasar latar belakang aplikasi).
+  - **Semantic Income** (Pemasukan): Hijau (contoh: `Colors.green.shade700`).
+  - **Semantic Expense** (Pengeluaran): Merah (contoh: `Colors.red.shade700`).
+  - **Semantic Transfer**: Biru standar (atau gunakan Primary `#5D5CFF`).
+  - **Negative Balance**: Merah menyala dengan latar belakang transparan merah (Red Tint) pada kartu.
+- **Typography:** Gunakan custom fonts via package `google_fonts` untuk menciptakan estetika *premium*.
+  - **Headline**: `Manrope` (Gunakan font weight tebal/bold untuk total saldo dan angka utama).
+  - **Body**: `Hanken Grotesk` (Untuk deskripsi transaksi, teks paragraf).
+  - **Label/Monospace**: `Jetbrains Mono` (Untuk tanggal, metadata, atau ID referensi).
   - Format angka wajib menggunakan pemisah ribuan (contoh: Rp 1.500.000).
 
 ## 2. SISTEM TATA LETAK & SPASI (LAYOUT & SPACING)
@@ -22,6 +25,15 @@
 - **Border Radius:** Gunakan sudut melengkung yang konsisten. Standar radius untuk Card dan BottomSheet adalah 16px. Untuk Button adalah 8px atau 12px (Standar Material 3).
 
 ## 3. PANDUAN KOMPONEN (COMPONENT GUIDELINES)
+- **Tombol (Buttons):**
+  - **Primary**: Latar solid menggunakan warna `Primary`, teks putih.
+  - **Secondary**: Latar abu-abu terang dengan teks gelap, untuk aksi non-utama.
+  - **Inverted**: Latar `Secondary` (gelap) dengan teks putih.
+  - **Outlined**: Latar transparan, *border* tebal dengan warna `Primary` atau `Secondary`.
+  - Semua tombol utama sebaiknya menggunakan bentuk semi-kapsul (Pill-shaped) atau radius agak melengkung.
+- **Progress Bar:**
+  - Wajib digunakan pada fitur *Tujuan Tabungan (Savings Goal)*.
+  - Gunakan warna *Brand* (`Primary`, `Secondary`, atau `Tertiary`) untuk indikator progres.
 - **Input Transaksi (Form):**
   - Gunakan `ModalBottomSheet` yang bisa digeser (scrollable) dari bawah untuk input transaksi baru, alih-alih berpindah ke halaman (`Route`) baru. Ini mempertahankan konteks layar pengguna dan ramah untuk penggunaan satu tangan.
   - Input nominal wajib menggunakan *auto-formatting* ribuan secara *real-time* saat pengguna mengetik.
@@ -47,7 +59,7 @@
 
 ## 5. NAVIGASI (ROUTING)
 - Gunakan paket `GoRouter` untuk manajemen rute.
-- **Main Layout:** Gunakan `NavigationBar` (Material 3 Bottom Navigation) dengan 4 tab utama:
+- **Main Layout:** Gunakan gaya navigasi **Floating / Pill-shaped Navigation Bar** (terpisah/mengambang dari tepi bawah layar dengan sudut sangat melengkung) dengan 4 tab utama:
   1. **Dashboard:** Ringkasan dompet dan agregasi singkat periode berjalan.
   2. **Transaksi:** Daftar riwayat kronologis lengkap dengan fungsi filter (Bulan/Jenis/Kantong).
   3. **Laporan:** Rendering agregasi Chart (menggunakan *Isolate*).
