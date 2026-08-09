@@ -34,6 +34,7 @@ lib/
 - **Identity:** Every entity MUST have `Id id = Isar.autoIncrement` and `String syncId` (UUID v4) for future cloud synchronization.
 - **Soft Delete:** Master entities (Wallet, Category, Contact) MUST use `late bool isActive;`. Never hard-delete them to maintain reporting history.
 - **Transaction Entity:** Must include `transactionGroupId` (for linked transactions like transfers), `type` ('INCOME', 'EXPENSE', 'TRANSFER_IN', 'TRANSFER_OUT'), and cross-references via `syncId` (`walletSyncId`, `categorySyncId`). DO NOT add a specific `adminFee` column.
+- **Savings Goal Architecture:** Savings Goals MUST be implemented as virtual Wallets (by extending or adding `isGoal` flag, `targetAmount`, and `targetDate` to `Wallet`) to preserve Net Worth accuracy. DO NOT create standalone entities that treat savings as expenses.
 
 ## 4. CRITICAL BUSINESS LOGIC (Must be in Repository Layer)
 - **The Reversal Pattern:** Any modification (Edit/Delete) of a Transaction MUST first revert the old amount on the Wallet balance, then apply the new amount, inside a single `isar.writeTxn()`.
@@ -41,6 +42,7 @@ lib/
   1. `TRANSFER_OUT` (deduct source wallet)
   2. `TRANSFER_IN` (add to destination wallet)
   3. `EXPENSE` (for admin fee, deduct source wallet, assign to 'Transfer Fee' category syncId).
+- **Savings Allocation (Menabung):** Allocating money towards a Savings Goal MUST strictly use the `Transfer` mechanism (`TRANSFER_OUT` from primary wallet, `TRANSFER_IN` to goal wallet) so overall Net Worth is preserved.
 - **Period Locking (Tutup Buku):** Before ANY write operation, check `lockedUntil` from the `AppSettings` singleton. If `transaction.date <= lockedUntil`, throw a `LockedPeriodException` ("Periode ini sudah tutup buku dan tidak dapat diubah.").
 
 ## 5. STATE MANAGEMENT & PERFORMANCE
