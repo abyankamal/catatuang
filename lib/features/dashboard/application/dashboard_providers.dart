@@ -45,20 +45,14 @@ class DashboardSummaryState {
 
 /// Aggregated dashboard state provider recalculating automatically when wallets, transactions, or settings change
 final dashboardSummaryProvider = FutureProvider<DashboardSummaryState>((ref) async {
-  final walletsAsync = ref.watch(activeWalletsStreamProvider);
-  final txAsync = ref.watch(recentTransactionsStreamProvider);
-  final settingsAsync = ref.watch(appSettingsStreamProvider);
+  final wallets = ref.watch(activeWalletsStreamProvider.select((v) => v.valueOrNull)) ?? [];
+  final settings = ref.watch(appSettingsStreamProvider.select((v) => v.valueOrNull));
+  // Ensure changes to transactions trigger recalculation
+  ref.watch(recentTransactionsStreamProvider.select((v) => v.valueOrNull));
 
   final txRepo = ref.watch(transactionRepositoryProvider);
 
-  final wallets = walletsAsync.valueOrNull ?? [];
-  final settings = settingsAsync.valueOrNull;
-
   final totalBalance = wallets.fold(0.0, (sum, w) => sum + w.balance);
-
-  // Suppress unused warning while ensuring txAsync triggers rebuild when transactions change
-  // ignore: unused_local_variable
-  final txList = txAsync.valueOrNull;
 
   final now = DateTime.now();
   final summary = await txRepo.calculateMonthlySummary(now.year, now.month);

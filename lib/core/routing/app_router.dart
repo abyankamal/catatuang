@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/dashboard/presentation/dashboard_screen.dart';
+import '../../features/goal/presentation/goal_list_screen.dart';
+import '../../features/goal/presentation/add_goal_screen.dart';
+import '../../features/goal/presentation/top_up_goal_screen.dart';
 import '../presentation/main_navigation_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -56,23 +59,27 @@ final appRouter = GoRouter(
             ),
           ],
         ),
-        // Tab 4: Pengaturan
+        // Tab 4: Target (Savings Goals)
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/settings',
-              builder: (context, state) => const Scaffold(
-                body: Center(
-                  child: Text(
-                    'Halaman Pengaturan\n(Akan segera diimplementasikan)',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
+              path: '/goals',
+              builder: (context, state) => const GoalListScreen(),
             ),
           ],
         ),
       ],
+    ),
+    GoRoute(
+      path: '/add_goal',
+      builder: (context, state) => const AddGoalScreen(),
+    ),
+    GoRoute(
+      path: '/top_up_goal/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return TopUpGoalScreen(goalId: id);
+      },
     ),
   ],
 );

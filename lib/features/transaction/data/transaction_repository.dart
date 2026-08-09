@@ -111,13 +111,36 @@ class TransactionRepository {
         .dateBetween(startDate, endDate)
         .findAll();
 
+    if (transactions.isEmpty) {
+      return const MonthlySummary(totalIncome: 0.0, totalExpense: 0.0);
+    }
+
+    // For small transaction counts, compute directly on main thread to avoid isolate overhead
+    if (transactions.length < 50) {
+      double income = 0.0;
+      double expense = 0.0;
+
+      for (final tx in transactions) {
+        if (tx.type == 'INCOME') {
+          income += tx.amount;
+        } else if (tx.type == 'EXPENSE') {
+          expense += tx.amount;
+        }
+      }
+
+      return MonthlySummary(
+        totalIncome: income,
+        totalExpense: expense,
+      );
+    }
+
     // Map to lightweight isolate data to avoid pass-by-reference issues
     final transactionData = transactions.map((t) => {
       'type': t.type,
       'amount': t.amount,
     }).toList();
 
-    // Execute aggregation inside Isolate.run() to prevent UI jank (AGENTS.md §5)
+    // Execute aggregation inside Isolate.run() for large datasets (AGENTS.md §5)
     return await Isolate.run(() {
       double income = 0.0;
       double expense = 0.0;

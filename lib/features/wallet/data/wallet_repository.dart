@@ -29,7 +29,6 @@ class WalletRepository {
     return _isar.wallets
         .filter()
         .isActiveEqualTo(true)
-        .and()
         .isGoalEqualTo(false)
         .watch(fireImmediately: true);
   }
@@ -39,7 +38,6 @@ class WalletRepository {
     return _isar.wallets
         .filter()
         .isActiveEqualTo(true)
-        .and()
         .isGoalEqualTo(true)
         .watch(fireImmediately: true);
   }

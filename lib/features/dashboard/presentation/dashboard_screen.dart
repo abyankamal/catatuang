@@ -53,83 +53,84 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       }
     });
 
-    return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(dashboardSummaryProvider);
-            ref.invalidate(activeWalletsStreamProvider);
-            ref.invalidate(recentTransactionsStreamProvider);
-          },
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
+    return Container(
+      color: AppColors.background,
+      child: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(dashboardSummaryProvider);
+                ref.invalidate(activeWalletsStreamProvider);
+                ref.invalidate(recentTransactionsStreamProvider);
+              },
               child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
+                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header: Catat Uang (Left), Notification & Profile (Right)
-                _buildHeader(),
-                const SizedBox(height: 20),
+                  children: [
+                    // Header: Catat Uang (Left), Notification & Profile (Right)
+                    _buildHeader(),
+                    const SizedBox(height: 20),
 
-                // Hero Total Balance Card
-                summaryAsync.when(
-                  skipLoadingOnReload: true,
-                  data: (summary) => HeroBalanceCard(
-                    totalBalance: summary.totalBalance,
-                    monthlyIncome: summary.monthlyIncome,
-                    monthlyExpense: summary.monthlyExpense,
-                    lockedUntil: summary.lockedUntil,
-                    onAddTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Form Tambah Transaksi akan dibuka!')),
-                      );
-                    },
-                    onScanTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Fitur Pindai Struk akan segera hadir!')),
-                      );
-                    },
-                  ),
-                  loading: () => const SizedBox(
-                    height: 220,
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (err, stack) => Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.expenseLight,
-                      borderRadius: BorderRadius.circular(16),
+                    // Hero Total Balance Card
+                    summaryAsync.when(
+                      skipLoadingOnReload: true,
+                      data: (summary) => HeroBalanceCard(
+                        totalBalance: summary.totalBalance,
+                        monthlyIncome: summary.monthlyIncome,
+                        monthlyExpense: summary.monthlyExpense,
+                        lockedUntil: summary.lockedUntil,
+                        onAddTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Form Tambah Transaksi akan dibuka!')),
+                          );
+                        },
+                        onScanTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Fitur Pindai Struk akan segera hadir!')),
+                          );
+                        },
+                      ),
+                      loading: () => const SizedBox(
+                        height: 220,
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                      error: (err, stack) => Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.expenseLight,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text('Gagal memuat ringkasan: $err'),
+                      ),
                     ),
-                    child: Text('Gagal memuat ringkasan: $err'),
-                  ),
-                ),
-                const SizedBox(height: 28),
+                    const SizedBox(height: 28),
 
-                // Recent Transactions Section (Aktivitas Terbaru)
-                _buildRecentTransactionsSection(
-                  recentTxAsync: recentTxAsync,
-                  categoryMap: categoryMap,
-                  walletMap: walletMap,
-                  lockedUntil: summaryAsync.valueOrNull?.lockedUntil,
-                ),
-                const SizedBox(height: 28),
+                    // Recent Transactions Section (Aktivitas Terbaru)
+                    _buildRecentTransactionsSection(
+                      recentTxAsync: recentTxAsync,
+                      categoryMap: categoryMap,
+                      walletMap: walletMap,
+                      lockedUntil: summaryAsync.valueOrNull?.lockedUntil,
+                    ),
+                    const SizedBox(height: 28),
 
-                // Expense Focus Section (Fokus Pengeluaran)
-                const ExpenseFocusCard(),
-                const SizedBox(height: 100), // Extra padding for floating bottom nav
-              ],
+                    // Expense Focus Section (Fokus Pengeluaran)
+                    const ExpenseFocusCard(),
+                    const SizedBox(height: 100), // Extra padding for floating bottom nav
+                  ],
+                ),
+              ),
             ),
           ),
         ),
       ),
-    ),
-  ),
-);
-}
+    );
+  }
 
   Widget _buildHeader() {
     return Row(
