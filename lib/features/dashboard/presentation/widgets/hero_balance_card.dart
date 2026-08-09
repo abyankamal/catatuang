@@ -109,9 +109,10 @@ class HeroBalanceCard extends StatelessWidget {
                   TextSpan(
                     text: endPart,
                     style: TextStyle(
-                      color: isNegative ? AppColors.expense : AppColors.primary.withAlpha(180),
+                      color: isNegative ? AppColors.expense : AppColors.secondary,
                       fontSize: 32,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
                     ),
                   ),
               ],
