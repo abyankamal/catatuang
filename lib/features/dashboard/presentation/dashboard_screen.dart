@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../category/data/category_repository.dart';
 import '../../category/domain/category.dart';
+import '../../transaction/data/transaction_repository.dart';
 import '../../wallet/data/wallet_repository.dart';
 import '../../wallet/domain/wallet.dart';
 import '../application/dashboard_providers.dart';
@@ -23,10 +24,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Seed default data if database is fresh
-    Future.microtask(() async {
-      await ref.read(walletRepositoryProvider).seedDefaultWalletIfEmpty();
-      await ref.read(categoryRepositoryProvider).seedDefaultCategoriesIfEmpty();
+    // Seed default data safely if database is fresh
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await ref.read(categoryRepositoryProvider).seedDefaultCategoriesIfEmpty();
+        await ref.read(walletRepositoryProvider).seedDefaultWalletIfEmpty();
+        await ref.read(transactionRepositoryProvider).seedDemoTransactionsIfEmpty();
+      } catch (e, st) {
+        debugPrint('Gagal melakukan seeding data default: $e\n$st');
+      }
     });
   }
 
@@ -36,6 +42,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final walletsAsync = ref.watch(activeWalletsStreamProvider);
     final recentTxAsync = ref.watch(recentTransactionsStreamProvider);
     final categoriesAsync = ref.watch(activeCategoriesStreamProvider);
+
+    debugPrint('DASHBOARD BUILD: summary=$summaryAsync, wallets=$walletsAsync, tx=$recentTxAsync, cat=$categoriesAsync');
 
     // Build Category lookup map
     final Map<String, Category> categoryMap = {};
@@ -53,22 +61,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       }
     });
 
-    return Container(
-      color: AppColors.background,
-      child: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(dashboardSummaryProvider);
-                ref.invalidate(activeWalletsStreamProvider);
-                ref.invalidate(recentTransactionsStreamProvider);
-              },
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(dashboardSummaryProvider);
+            ref.invalidate(activeWalletsStreamProvider);
+            ref.invalidate(recentTransactionsStreamProvider);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -84,11 +91,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         monthlyIncome: summary.monthlyIncome,
                         monthlyExpense: summary.monthlyExpense,
                         lockedUntil: summary.lockedUntil,
-                        onAddTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Form Tambah Transaksi akan dibuka!')),
-                          );
-                        },
+                        onAddTap: () => context.push('/add_transaction'),
                         onScanTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Fitur Pindai Struk akan segera hadir!')),
@@ -136,9 +139,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Row(
       children: [
         // App Title on Left
-        Text(
+        const Text(
           'Catat Uang',
-          style: GoogleFonts.manrope(
+          style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w800,
             color: AppColors.primary,
@@ -209,9 +212,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
+            const Text(
               'Aktivitas Terbaru',
-              style: GoogleFonts.manrope(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppColors.secondary,
@@ -227,7 +230,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               },
               child: Text(
                 'Lihat Semua',
-                style: GoogleFonts.hankenGrotesk(
+                style: TextStyle(
                   color: AppColors.primary.withAlpha(200),
                   fontWeight: FontWeight.w600,
                 ),
@@ -297,9 +300,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'Belum Ada Catatan Keuangan',
-            style: GoogleFonts.manrope(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AppColors.secondary,
@@ -309,7 +312,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Text(
             'Belum ada pengeluaran atau pemasukan bulan ini.\nKetuk tombol + Tambah di atas untuk mencatat.',
             textAlign: TextAlign.center,
-            style: GoogleFonts.hankenGrotesk(
+            style: TextStyle(
               fontSize: 13,
               color: Colors.grey.shade600,
               height: 1.4,

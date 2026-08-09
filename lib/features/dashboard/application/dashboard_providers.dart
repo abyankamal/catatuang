@@ -45,10 +45,13 @@ class DashboardSummaryState {
 
 /// Aggregated dashboard state provider recalculating automatically when wallets, transactions, or settings change
 final dashboardSummaryProvider = FutureProvider<DashboardSummaryState>((ref) async {
-  final wallets = ref.watch(activeWalletsStreamProvider.select((v) => v.valueOrNull)) ?? [];
-  final settings = ref.watch(appSettingsStreamProvider.select((v) => v.valueOrNull));
+  final walletsAsync = ref.watch(activeWalletsStreamProvider);
+  final settingsAsync = ref.watch(appSettingsStreamProvider);
   // Ensure changes to transactions trigger recalculation
-  ref.watch(recentTransactionsStreamProvider.select((v) => v.valueOrNull));
+  ref.watch(recentTransactionsStreamProvider);
+
+  final wallets = walletsAsync.valueOrNull ?? [];
+  final settings = settingsAsync.valueOrNull;
 
   final txRepo = ref.watch(transactionRepositoryProvider);
 

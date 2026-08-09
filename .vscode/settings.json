@@ -1,0 +1,10 @@
+{
+  "java.jdt.ls.java.home": "/Applications/Android Studio.app/Contents/jbr/Contents/Home",
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-21",
+      "path": "/Applications/Android Studio.app/Contents/jbr/Contents/Home",
+      "default": true
+    }
+  ]
+}

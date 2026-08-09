@@ -32,8 +32,8 @@ class MainNavigationScreen extends StatelessWidget {
       extendBody: true,
       body: navigationShell,
       bottomNavigationBar: SafeArea(
-        child: Align(
-          alignment: Alignment.bottomCenter,
+        child: Center(
+          heightFactor: 1.0,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
             child: Container(

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
@@ -59,7 +58,7 @@ class HeroBalanceCard extends StatelessWidget {
             children: [
               Text(
                 'Total Saldo',
-                style: GoogleFonts.hankenGrotesk(
+                style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -80,7 +79,7 @@ class HeroBalanceCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         'Tutup Buku: ${DateFormatter.formatShortDate(lockedUntil!)}',
-                        style: GoogleFonts.hankenGrotesk(
+                        style: TextStyle(
                           color: Colors.amber.shade900,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -99,7 +98,7 @@ class HeroBalanceCard extends StatelessWidget {
               children: [
                 TextSpan(
                   text: mainPart,
-                  style: GoogleFonts.manrope(
+                  style: TextStyle(
                     color: isNegative ? AppColors.expense : AppColors.secondary,
                     fontSize: 32,
                     fontWeight: FontWeight.w800,
@@ -109,7 +108,7 @@ class HeroBalanceCard extends StatelessWidget {
                 if (endPart.isNotEmpty)
                   TextSpan(
                     text: endPart,
-                    style: GoogleFonts.manrope(
+                    style: TextStyle(
                       color: isNegative ? AppColors.expense : AppColors.primary.withAlpha(180),
                       fontSize: 32,
                       fontWeight: FontWeight.w700,
@@ -146,41 +145,23 @@ class HeroBalanceCard extends StatelessWidget {
           Divider(color: Colors.grey.shade100, height: 1),
           const SizedBox(height: 20),
 
-          // Pill Action Buttons inside the card
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: onAddTap ?? () {},
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Tambah'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
+          // Pill Action Button inside the card
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onAddTap ?? () {},
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Tambah Transaksi'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
                 ),
+                elevation: 0,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onScanTap ?? () {},
-                  icon: const Icon(Icons.crop_free_rounded, size: 18),
-                  label: const Text('Pindai Struk'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.secondary,
-                    side: BorderSide(color: Colors.grey.shade300, width: 1),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -213,7 +194,7 @@ class HeroBalanceCard extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 label,
-                style: GoogleFonts.jetBrainsMono(
+                style: TextStyle(
                   color: color,
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
@@ -225,7 +206,7 @@ class HeroBalanceCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             '${isIncome ? '+' : '-'}${CurrencyFormatter.formatCompact(amount)}',
-            style: GoogleFonts.manrope(
+            style: const TextStyle(
               color: AppColors.secondary,
               fontSize: 14,
               fontWeight: FontWeight.w700,

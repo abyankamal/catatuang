@@ -41,19 +41,19 @@ class AppTheme {
       surface: AppColors.cardSurface,
     );
 
-    final textTheme = GoogleFonts.hankenGroteskTextTheme().copyWith(
-      headlineLarge: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
-      headlineMedium: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
-      headlineSmall: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
-      titleLarge: GoogleFonts.manrope(fontWeight: FontWeight.w700, color: AppColors.secondary),
-      titleMedium: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.secondary),
-      titleSmall: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.secondary),
-      bodyLarge: GoogleFonts.hankenGrotesk(color: AppColors.secondary),
-      bodyMedium: GoogleFonts.hankenGrotesk(color: AppColors.secondary),
-      bodySmall: GoogleFonts.hankenGrotesk(color: Colors.grey.shade600),
-      labelLarge: GoogleFonts.jetBrainsMono(fontWeight: FontWeight.w600),
-      labelMedium: GoogleFonts.jetBrainsMono(fontWeight: FontWeight.w500),
-      labelSmall: GoogleFonts.jetBrainsMono(color: Colors.grey.shade500),
+    final textTheme = const TextTheme().copyWith(
+      headlineLarge: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary),
+      headlineMedium: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary),
+      headlineSmall: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary),
+      titleLarge: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.secondary),
+      titleMedium: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.secondary),
+      titleSmall: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.secondary),
+      bodyLarge: const TextStyle(color: AppColors.secondary),
+      bodyMedium: const TextStyle(color: AppColors.secondary),
+      bodySmall: TextStyle(color: Colors.grey.shade600),
+      labelLarge: const TextStyle(fontWeight: FontWeight.w600),
+      labelMedium: const TextStyle(fontWeight: FontWeight.w500),
+      labelSmall: TextStyle(color: Colors.grey.shade500),
     );
 
     return ThemeData(

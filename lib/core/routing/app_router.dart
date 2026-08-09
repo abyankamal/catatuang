@@ -5,6 +5,7 @@ import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/goal/presentation/goal_list_screen.dart';
 import '../../features/goal/presentation/add_goal_screen.dart';
 import '../../features/goal/presentation/top_up_goal_screen.dart';
+import '../../features/transaction/presentation/add_transaction_screen.dart';
 import '../presentation/main_navigation_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -69,6 +70,10 @@ final appRouter = GoRouter(
           ],
         ),
       ],
+    ),
+    GoRoute(
+      path: '/add_transaction',
+      builder: (context, state) => const AddTransactionScreen(),
     ),
     GoRoute(
       path: '/add_goal',

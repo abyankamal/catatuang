@@ -1,10 +1,14 @@
 import 'dart:isolate';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/database_provider.dart';
+import '../../../core/exceptions/locked_period_exception.dart';
+import '../../../core/utils/dummy_data.dart';
+import '../../settings/domain/app_settings.dart';
 import '../../wallet/domain/wallet.dart';
 import '../domain/transaction.dart';
 
@@ -29,6 +33,18 @@ class TransactionRepository {
 
   TransactionRepository(this._isar);
 
+  /// Seed demo transactions if database is empty
+  Future<void> seedDemoTransactionsIfEmpty() async {
+    final count = await _isar.transactions.where().count();
+    if (count == 0) {
+      await _isar.writeTxn(() async {
+        for (final tx in DummyData.transactions) {
+          await _isar.transactions.put(tx);
+        }
+      });
+    }
+  }
+
   /// Watch recent transactions sorted by date descending
   Stream<List<Transaction>> watchRecentTransactions({int limit = 10}) {
     return _isar.transactions
@@ -38,9 +54,51 @@ class TransactionRepository {
         .watch(fireImmediately: true);
   }
 
-  /// Watch all transactions stream for real-time aggregation recalculation
-  Stream<void> watchTransactionsChanged() {
-    return _isar.transactions.watchLazy(fireImmediately: true);
+  /// Add standard INCOME or EXPENSE transaction
+  Future<Transaction> addTransaction({
+    required String type,
+    required double amount,
+    required DateTime date,
+    required String walletSyncId,
+    String? categorySyncId,
+    String? description,
+  }) async {
+    // 1. Period locking check (AGENTS.md §4)
+    final settings = await _isar.appSettings.where().findFirst();
+    if (settings?.lockedUntil != null && !date.isAfter(settings!.lockedUntil!)) {
+      throw LockedPeriodException();
+    }
+
+    final wallet = await _isar.wallets.filter().syncIdEqualTo(walletSyncId).findFirst();
+    if (wallet == null) {
+      throw Exception('Dompet tidak ditemukan.');
+    }
+
+    final now = DateTime.now();
+    final tx = Transaction()
+      ..syncId = _uuid.v4()
+      ..type = type
+      ..amount = amount
+      ..date = date
+      ..walletSyncId = walletSyncId
+      ..categorySyncId = categorySyncId
+      ..description = description
+      ..createdAt = now
+      ..updatedAt = now;
+
+    await _isar.writeTxn(() async {
+      if (type == 'INCOME') {
+        wallet.balance += amount;
+      } else if (type == 'EXPENSE') {
+        wallet.balance -= amount;
+      }
+      wallet.updatedAt = now;
+
+      await _isar.wallets.put(wallet);
+      await _isar.transactions.put(tx);
+    });
+
+    return tx;
   }
 
   /// Menabung ke Tujuan Tabungan menggunakan 3-Transaction Transfer Pattern (AGENTS.md §4)
@@ -115,8 +173,8 @@ class TransactionRepository {
       return const MonthlySummary(totalIncome: 0.0, totalExpense: 0.0);
     }
 
-    // For small transaction counts, compute directly on main thread to avoid isolate overhead
-    if (transactions.length < 50) {
+    // For Web or small transaction counts, compute directly on main thread
+    if (kIsWeb || transactions.length < 50) {
       double income = 0.0;
       double expense = 0.0;
 

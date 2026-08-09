@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -16,20 +15,19 @@ class GoalListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final goalsAsync = ref.watch(activeGoalsStreamProvider);
 
-    return Container(
-      color: AppColors.background,
-      child: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(activeGoalsStreamProvider);
-              },
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(activeGoalsStreamProvider);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -41,6 +39,7 @@ class GoalListScreen extends ConsumerWidget {
                         if (goals.isEmpty) {
                           return _buildEmptyState(context);
                         }
+
                         return ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
@@ -52,12 +51,18 @@ class GoalListScreen extends ConsumerWidget {
                       },
                       loading: () => const Center(
                         child: Padding(
-                          padding: EdgeInsets.all(32),
+                          padding: EdgeInsets.all(32.0),
                           child: CircularProgressIndicator(),
                         ),
                       ),
                       error: (err, stack) => Center(
-                        child: Text('Gagal memuat target: $err'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Text(
+                            'Gagal memuat target tabungan: $err',
+                            style: const TextStyle(color: AppColors.expense),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 100), // Padding for bottom nav
@@ -72,48 +77,23 @@ class GoalListScreen extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Tujuan Tabungan',
-              style: GoogleFonts.manrope(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: AppColors.secondary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Wujudkan impianmu pelan-pelan',
-              style: GoogleFonts.hankenGrotesk(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-        ElevatedButton.icon(
-          onPressed: () {
-            context.push('/add_goal');
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        const Text(
+          'Tujuan Tabungan',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: AppColors.secondary,
           ),
-          icon: const Icon(Icons.add_rounded, size: 20),
-          label: Text(
-            'Tambah',
-            style: GoogleFonts.manrope(
-              fontWeight: FontWeight.bold,
-            ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Wujudkan impianmu pelan-pelan',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey.shade600,
           ),
         ),
       ],
@@ -123,30 +103,37 @@ class GoalListScreen extends ConsumerWidget {
   Widget _buildEmptyState(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(8),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withAlpha(20),
+            decoration: const BoxDecoration(
+              color: AppColors.neutral,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.track_changes_rounded,
-              size: 48,
-              color: AppColors.primary,
+              size: 40,
+              color: AppColors.primary.withAlpha(180),
             ),
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Belum ada Target',
-            style: GoogleFonts.manrope(
+          const SizedBox(height: 20),
+          const Text(
+            'Belum Ada Target Tabungan',
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: AppColors.secondary,
@@ -154,12 +141,26 @@ class GoalListScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Mulai menabung untuk wujudkan\nbarang atau liburan impianmu.',
+            'Mulai buat target tabungan untuk impianmu!\nUang yang kamu sisihkan akan aman tersimpan.',
             textAlign: TextAlign.center,
-            style: GoogleFonts.hankenGrotesk(
-              fontSize: 14,
+            style: TextStyle(
+              fontSize: 13,
               color: Colors.grey.shade600,
               height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () => context.push('/add_goal'),
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('Buat Target Sekarang'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
             ),
           ),
         ],
@@ -178,7 +179,7 @@ class _GoalCard extends StatelessWidget {
     final target = goal.targetAmount ?? 0;
     final balance = goal.balance;
     final progress = target > 0 ? (balance / target).clamp(0.0, 1.0) : 0.0;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -204,13 +205,16 @@ class _GoalCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     goal.name,
-                    style: GoogleFonts.manrope(
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppColors.secondary,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
@@ -219,7 +223,7 @@ class _GoalCard extends StatelessWidget {
                   ),
                   child: Text(
                     progress >= 1.0 ? 'Tercapai' : '${(progress * 100).toStringAsFixed(0)}%',
-                    style: GoogleFonts.jetBrainsMono(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: progress >= 1.0 ? Colors.green.shade700 : AppColors.tertiary,
@@ -229,7 +233,7 @@ class _GoalCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Progress Bar
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
@@ -243,56 +247,65 @@ class _GoalCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            
-            // Amounts
+
+            // Amounts (Fixed overflow layout with Expanded and TextOverflow.ellipsis)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Terkumpul',
-                      style: GoogleFonts.hankenGrotesk(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Terkumpul',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Rp ${CurrencyFormatter.format(balance)}',
-                      style: GoogleFonts.manrope(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
+                      const SizedBox(height: 4),
+                      Text(
+                        'Rp ${CurrencyFormatter.format(balance)}',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Target',
-                      style: GoogleFonts.hankenGrotesk(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Target',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Rp ${CurrencyFormatter.format(target)}',
-                      style: GoogleFonts.manrope(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.secondary,
+                      const SizedBox(height: 4),
+                      Text(
+                        'Rp ${CurrencyFormatter.format(target)}',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.secondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -304,7 +317,7 @@ class _GoalCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         DateFormatter.formatShortDate(goal.targetDate!),
-                        style: GoogleFonts.hankenGrotesk(
+                        style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade600,
                           fontWeight: FontWeight.w600,
@@ -314,7 +327,7 @@ class _GoalCard extends StatelessWidget {
                   )
                 else
                   const SizedBox(),
-                  
+
                 SizedBox(
                   height: 36,
                   child: OutlinedButton(
@@ -329,9 +342,9 @@ class _GoalCard extends StatelessWidget {
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                     ),
-                    child: Text(
+                    child: const Text(
                       'Nabung',
-                      style: GoogleFonts.manrope(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),

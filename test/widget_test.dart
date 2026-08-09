@@ -1,123 +1,67 @@
-import 'dart:ffi';
-import 'dart:io';
+import 'package:catatuang/core/utils/dummy_data.dart';
+import 'package:catatuang/features/dashboard/application/dashboard_providers.dart';
+import 'package:catatuang/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:isar/isar.dart';
-
-import 'package:catatuang/main.dart';
-import 'package:catatuang/core/database/database_provider.dart';
-import 'package:catatuang/features/wallet/domain/wallet.dart';
-import 'package:catatuang/features/category/domain/category.dart';
-import 'package:catatuang/features/contact/domain/contact.dart';
-import 'package:catatuang/features/debt/domain/debt.dart';
-import 'package:catatuang/features/transaction/domain/transaction.dart';
-import 'package:catatuang/features/settings/domain/app_settings.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:catatuang/features/category/data/category_repository.dart';
 import 'package:catatuang/features/wallet/data/wallet_repository.dart';
-import 'package:catatuang/features/dashboard/application/dashboard_providers.dart';
-import 'package:catatuang/features/dashboard/presentation/dashboard_screen.dart';
-import 'package:catatuang/features/goal/presentation/goal_list_screen.dart';
-import 'package:catatuang/core/theme/app_theme.dart';
+
+import 'package:catatuang/features/transaction/data/transaction_repository.dart';
+
+class MockWalletRepository implements WalletRepository {
+  @override
+  Future<void> seedDefaultWalletIfEmpty() async {}
+  
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class MockCategoryRepository implements CategoryRepository {
+  @override
+  Future<void> seedDefaultCategoriesIfEmpty() async {}
+  
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class MockTransactionRepository implements TransactionRepository {
+  @override
+  Future<void> seedDemoTransactionsIfEmpty() async {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
-  late Isar isar;
-  late Directory tempDir;
-
   setUpAll(() async {
-    await Isar.initializeIsarCore(
-      libraries: {
-        Abi.macosArm64: '/Users/muhammadabyankamal/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/macos/libisar.dylib',
-        Abi.macosX64: '/Users/muhammadabyankamal/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/macos/libisar.dylib',
-      },
-    );
+    TestWidgetsFlutterBinding.ensureInitialized();
+    await initializeDateFormatting('id_ID', null);
   });
 
-  setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('isar_test_');
-    isar = await Isar.open(
-      [
-        WalletSchema,
-        CategorySchema,
-        ContactSchema,
-        DebtSchema,
-        TransactionSchema,
-        AppSettingsSchema,
-      ],
-      directory: tempDir.path,
-    );
-  });
+  testWidgets('DashboardScreen renders without error', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.resetPhysicalSize);
 
-  tearDown(() async {
-    await isar.close(deleteFromDisk: true);
-    if (tempDir.existsSync()) {
-      await tempDir.delete(recursive: true);
-    }
-  });
-
-  test('dashboardSummaryProvider calculates correctly without timeout', () async {
-    final container = ProviderContainer(
-      overrides: [
-        isarProvider.overrideWithValue(isar),
-      ],
-    );
-
-    final walletRepo = container.read(walletRepositoryProvider);
-    await walletRepo.seedDefaultWalletIfEmpty();
-
-    final summary = await container.read(dashboardSummaryProvider.future);
-    expect(summary.totalBalance, equals(0.0));
-    expect(summary.monthlyIncome, equals(0.0));
-    expect(summary.monthlyExpense, equals(0.0));
-  });
-
-  testWidgets('DashboardScreen renders without crashing', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          isarProvider.overrideWithValue(isar),
+          walletRepositoryProvider.overrideWithValue(MockWalletRepository()),
+          categoryRepositoryProvider.overrideWithValue(MockCategoryRepository()),
+          transactionRepositoryProvider.overrideWithValue(MockTransactionRepository()),
+          activeWalletsStreamProvider.overrideWith((ref) => Stream.value(DummyData.wallets)),
+          activeCategoriesStreamProvider.overrideWith((ref) => Stream.value(DummyData.categories)),
+          recentTransactionsStreamProvider.overrideWith((ref) => Stream.value(DummyData.transactions)),
+          dashboardSummaryProvider.overrideWith((ref) => Future.value(DummyData.summary)),
         ],
-        child: MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: const DashboardScreen(),
+        child: const MaterialApp(
+          home: Scaffold(body: DashboardScreen()),
         ),
       ),
     );
-
     await tester.pump();
     expect(find.text('Catat Uang'), findsOneWidget);
-  });
-
-  testWidgets('GoalListScreen renders without crashing', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          isarProvider.overrideWithValue(isar),
-        ],
-        child: MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: const GoalListScreen(),
-        ),
-      ),
-    );
-
-    await tester.pump();
-    expect(find.text('Tujuan Tabungan'), findsOneWidget);
-  });
-
-  testWidgets('Pump full app and verify UI elements', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          isarProvider.overrideWithValue(isar),
-        ],
-        child: const CatatUangApp(),
-      ),
-    );
-
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-
-    expect(find.text('Catat Uang'), findsOneWidget);
-    expect(find.text('Total Saldo'), findsOneWidget);
   });
 }

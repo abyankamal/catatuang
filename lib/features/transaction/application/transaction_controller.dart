@@ -1,0 +1,41 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../data/transaction_repository.dart';
+
+final transactionControllerProvider =
+    StateNotifierProvider<TransactionController, AsyncValue<void>>((ref) {
+  final repo = ref.watch(transactionRepositoryProvider);
+  return TransactionController(repo);
+});
+
+class TransactionController extends StateNotifier<AsyncValue<void>> {
+  final TransactionRepository _repository;
+
+  TransactionController(this._repository) : super(const AsyncValue.data(null));
+
+  Future<bool> addTransaction({
+    required String type,
+    required double amount,
+    required DateTime date,
+    required String walletSyncId,
+    String? categorySyncId,
+    String? description,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      await _repository.addTransaction(
+        type: type,
+        amount: amount,
+        date: date,
+        walletSyncId: walletSyncId,
+        categorySyncId: categorySyncId,
+        description: description,
+      );
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
+
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/database_provider.dart';
@@ -30,6 +31,31 @@ class CategoryRepository {
         .findAll();
   }
 
+  /// Buat kategori pemasukan/pengeluaran baru
+  Future<Category> createCategory({
+    required String name,
+    required String type, // 'INCOME' or 'EXPENSE'
+    String icon = 'category',
+    int colorValue = 0xFF5D5CFF,
+  }) async {
+    final now = DateTime.now();
+    final category = Category()
+      ..syncId = _uuid.v4()
+      ..name = name
+      ..type = type
+      ..icon = icon
+      ..colorValue = colorValue
+      ..isActive = true
+      ..createdAt = now
+      ..updatedAt = now;
+
+    await _isar.writeTxn(() async {
+      await _isar.categorys.put(category);
+    });
+
+    return category;
+  }
+
   /// Inisialisasi kategori standar jika belum ada
   Future<void> seedDefaultCategoriesIfEmpty() async {
     final count = await _isar.categorys.count();
@@ -39,7 +65,7 @@ class CategoryRepository {
         final defaults = [
           // Expense Categories
           Category()
-            ..syncId = _uuid.v4()
+            ..syncId = 'cat_makanan'
             ..name = 'Makanan & Minuman'
             ..type = 'EXPENSE'
             ..icon = 'restaurant'
@@ -48,7 +74,7 @@ class CategoryRepository {
             ..createdAt = now
             ..updatedAt = now,
           Category()
-            ..syncId = _uuid.v4()
+            ..syncId = 'cat_transport'
             ..name = 'Transportasi'
             ..type = 'EXPENSE'
             ..icon = 'directions_car'
@@ -57,7 +83,7 @@ class CategoryRepository {
             ..createdAt = now
             ..updatedAt = now,
           Category()
-            ..syncId = _uuid.v4()
+            ..syncId = 'cat_belanja'
             ..name = 'Belanja'
             ..type = 'EXPENSE'
             ..icon = 'shopping_bag'
@@ -66,7 +92,7 @@ class CategoryRepository {
             ..createdAt = now
             ..updatedAt = now,
           Category()
-            ..syncId = _uuid.v4()
+            ..syncId = 'cat_tagihan'
             ..name = 'Tagihan & Utilitas'
             ..type = 'EXPENSE'
             ..icon = 'receipt'
@@ -75,7 +101,7 @@ class CategoryRepository {
             ..createdAt = now
             ..updatedAt = now,
           Category()
-            ..syncId = _uuid.v4()
+            ..syncId = 'cat_transfer_fee'
             ..name = 'Biaya Transfer'
             ..type = 'EXPENSE'
             ..icon = 'swap_horiz'
@@ -86,7 +112,7 @@ class CategoryRepository {
 
           // Income Categories
           Category()
-            ..syncId = _uuid.v4()
+            ..syncId = 'cat_gaji'
             ..name = 'Gaji'
             ..type = 'INCOME'
             ..icon = 'payments'
@@ -95,7 +121,7 @@ class CategoryRepository {
             ..createdAt = now
             ..updatedAt = now,
           Category()
-            ..syncId = _uuid.v4()
+            ..syncId = 'cat_bonus'
             ..name = 'Bonus & Hadiah'
             ..type = 'INCOME'
             ..icon = 'card_giftcard'
@@ -104,7 +130,7 @@ class CategoryRepository {
             ..createdAt = now
             ..updatedAt = now,
           Category()
-            ..syncId = _uuid.v4()
+            ..syncId = 'cat_investasi'
             ..name = 'Investasi'
             ..type = 'INCOME'
             ..icon = 'trending_up'

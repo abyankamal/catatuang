@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_theme.dart';
 
@@ -28,9 +27,9 @@ class ExpenseFocusCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Fokus Pengeluaran',
-            style: GoogleFonts.manrope(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: AppColors.secondary,
@@ -61,7 +60,7 @@ class ExpenseFocusCard extends StatelessWidget {
                     children: [
                       Text(
                         'MINGGUAN',
-                        style: GoogleFonts.jetBrainsMono(
+                        style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
                           color: Colors.grey.shade500,
@@ -69,9 +68,9 @@ class ExpenseFocusCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
+                      const Text(
                         '68%',
-                        style: GoogleFonts.manrope(
+                        style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
                           color: AppColors.secondary,
@@ -112,7 +111,7 @@ class ExpenseFocusCard extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           label,
-          style: GoogleFonts.hankenGrotesk(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: Colors.grey.shade700,
