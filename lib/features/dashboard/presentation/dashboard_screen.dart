@@ -61,11 +61,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ref.invalidate(activeWalletsStreamProvider);
             ref.invalidate(recentTransactionsStreamProvider);
           },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header: Catat Uang (Left), Notification & Profile (Right)
                 _buildHeader(),
@@ -122,8 +126,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 
   Widget _buildHeader() {
     return Row(
