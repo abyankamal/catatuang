@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
@@ -9,6 +10,8 @@ class HeroBalanceCard extends StatelessWidget {
   final double monthlyIncome;
   final double monthlyExpense;
   final DateTime? lockedUntil;
+  final VoidCallback? onAddTap;
+  final VoidCallback? onScanTap;
 
   const HeroBalanceCard({
     super.key,
@@ -16,31 +19,37 @@ class HeroBalanceCard extends StatelessWidget {
     required this.monthlyIncome,
     required this.monthlyExpense,
     this.lockedUntil,
+    this.onAddTap,
+    this.onScanTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final isNegative = totalBalance < 0;
+    final formattedBalance = CurrencyFormatter.format(totalBalance);
+    
+    // Split formatted string for styled decimal/thousands if needed
+    String mainPart = formattedBalance;
+    String endPart = '';
+    if (formattedBalance.length > 4) {
+      endPart = formattedBalance.substring(formattedBalance.length - 4);
+      mainPart = formattedBalance.substring(0, formattedBalance.length - 4);
+    }
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          colors: isNegative
-              ? [const Color(0xFF991B1B), const Color(0xFFDC2626)]
-              : [const Color(0xFF0F172A), const Color(0xFF1E293B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: (isNegative ? Colors.red : Colors.black).withAlpha(40),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: AppColors.primary.withAlpha(12),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
+        border: Border.all(color: Colors.grey.shade100),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,32 +57,32 @@ class HeroBalanceCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Total Saldo Keseluruhan',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 13,
+              Text(
+                'Total Saldo',
+                style: GoogleFonts.hankenGrotesk(
+                  color: Colors.grey.shade600,
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               if (lockedUntil != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withAlpha(50),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.amber.withAlpha(100), width: 1),
+                    color: Colors.amber.withAlpha(30),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.amber.withAlpha(80)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.lock, size: 12, color: Colors.amber),
+                      const Icon(Icons.lock_rounded, size: 12, color: Colors.amber),
                       const SizedBox(width: 4),
                       Text(
                         'Tutup Buku: ${DateFormatter.formatShortDate(lockedUntil!)}',
-                        style: const TextStyle(
-                          color: Colors.amber,
-                          fontSize: 10,
+                        style: GoogleFonts.hankenGrotesk(
+                          color: Colors.amber.shade900,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -83,35 +92,92 @@ class HeroBalanceCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            CurrencyFormatter.format(totalBalance),
-            style: TextStyle(
-              color: isNegative ? const Color(0xFFFFD1D1) : Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
+          
+          // Big formatted Balance
+          RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: mainPart,
+                  style: GoogleFonts.manrope(
+                    color: isNegative ? AppColors.expense : AppColors.secondary,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                if (endPart.isNotEmpty)
+                  TextSpan(
+                    text: endPart,
+                    style: GoogleFonts.manrope(
+                      color: isNegative ? AppColors.expense : AppColors.primary.withAlpha(180),
+                      fontSize: 32,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 20),
-          const Divider(color: Colors.white12, height: 1),
-          const SizedBox(height: 16),
+
+          // Income and Expense Mini Cards
           Row(
             children: [
               Expanded(
-                child: _buildSummaryChip(
-                  label: 'Pemasukan Bulan Ini',
+                child: _buildStatChip(
+                  label: 'PEMASUKAN',
                   amount: monthlyIncome,
                   color: AppColors.income,
-                  icon: Icons.arrow_downward_rounded,
+                  isIncome: true,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildSummaryChip(
-                  label: 'Pengeluaran Bulan Ini',
+                child: _buildStatChip(
+                  label: 'PENGELUARAN',
                   amount: monthlyExpense,
                   color: AppColors.expense,
-                  icon: Icons.arrow_upward_rounded,
+                  isIncome: false,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Divider(color: Colors.grey.shade100, height: 1),
+          const SizedBox(height: 20),
+
+          // Pill Action Buttons inside the card
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: onAddTap ?? () {},
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Tambah'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onScanTap ?? () {},
+                  icon: const Icon(Icons.crop_free_rounded, size: 18),
+                  label: const Text('Pindai Struk'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.secondary,
+                    side: BorderSide(color: Colors.grey.shade300, width: 1),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -121,53 +187,51 @@ class HeroBalanceCard extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryChip({
+  Widget _buildStatChip({
     required String label,
     required double amount,
     required Color color,
-    required IconData icon,
+    required bool isIncome,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(15),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.neutral,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200.withAlpha(120)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.withAlpha(40),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 14, color: color),
+          Row(
+            children: [
+              Icon(
+                isIncome ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                size: 12,
+                color: color,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: GoogleFonts.jetBrainsMono(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white60,
-                    fontSize: 10,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  CurrencyFormatter.formatCompact(amount),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 6),
+          Text(
+            '${isIncome ? '+' : '-'}${CurrencyFormatter.formatCompact(amount)}',
+            style: GoogleFonts.manrope(
+              color: AppColors.secondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

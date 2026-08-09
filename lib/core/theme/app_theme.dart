@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
+  // Brand Colors (Stitch Design System)
+  static const Color primary = Color(0xFF5D5CFF);       // Purplish Blue
+  static const Color secondary = Color(0xFF0F172A);     // Deep Slate Navy
+  static const Color tertiary = Color(0xFF38BDF8);      // Sky Blue
+  static const Color neutral = Color(0xFFF8F9FA);       // Off White / Soft Grey
+
   // Semantic Financial Colors
   static const Color income = Color(0xFF10B981);       // Emerald Green
   static const Color incomeDark = Color(0xFF047857);
@@ -10,7 +17,7 @@ class AppColors {
   static const Color expenseDark = Color(0xFFB91C1C);
   static const Color expenseLight = Color(0xFFFEE2E2);
 
-  static const Color transfer = Color(0xFF3B82F6);     // Royal Blue
+  static const Color transfer = Color(0xFF5D5CFF);     // Brand Primary
   static const Color transferDark = Color(0xFF1D4ED8);
   static const Color transferLight = Color(0xFFDBEAFE);
 
@@ -19,16 +26,34 @@ class AppColors {
   static const Color negativeAlertBorder = Color(0xFFFCA5A5);
 
   // Background & Surfaces
-  static const Color background = Color(0xFFF8FAFC);   // Very light grey
+  static const Color background = Color(0xFFF4F6F9);   // Soft neutral background
   static const Color cardSurface = Colors.white;
 }
 
 class AppTheme {
   static ThemeData get lightTheme {
     final baseColorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF0F172A), // Slate 900 primary accent
+      seedColor: AppColors.primary,
+      primary: AppColors.primary,
+      secondary: AppColors.secondary,
+      tertiary: AppColors.tertiary,
       brightness: Brightness.light,
       surface: AppColors.cardSurface,
+    );
+
+    final textTheme = GoogleFonts.hankenGroteskTextTheme().copyWith(
+      headlineLarge: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
+      headlineMedium: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
+      headlineSmall: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
+      titleLarge: GoogleFonts.manrope(fontWeight: FontWeight.w700, color: AppColors.secondary),
+      titleMedium: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.secondary),
+      titleSmall: GoogleFonts.manrope(fontWeight: FontWeight.w600, color: AppColors.secondary),
+      bodyLarge: GoogleFonts.hankenGrotesk(color: AppColors.secondary),
+      bodyMedium: GoogleFonts.hankenGrotesk(color: AppColors.secondary),
+      bodySmall: GoogleFonts.hankenGrotesk(color: Colors.grey.shade600),
+      labelLarge: GoogleFonts.jetBrainsMono(fontWeight: FontWeight.w600),
+      labelMedium: GoogleFonts.jetBrainsMono(fontWeight: FontWeight.w500),
+      labelSmall: GoogleFonts.jetBrainsMono(color: Colors.grey.shade500),
     );
 
     return ThemeData(
@@ -36,26 +61,26 @@ class AppTheme {
       colorScheme: baseColorScheme.copyWith(
         surface: AppColors.cardSurface,
       ),
+      textTheme: textTheme,
       scaffoldBackgroundColor: AppColors.background,
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(
-          color: Color(0xFF0F172A),
+        titleTextStyle: GoogleFonts.manrope(
+          color: AppColors.secondary,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
       ),
       cardTheme: CardThemeData(
         color: AppColors.cardSurface,
-        elevation: 0.5,
-        shadowColor: Colors.black.withAlpha(20),
+        elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           side: BorderSide(
-            color: Colors.grey.shade200,
+            color: Colors.grey.shade100,
             width: 1,
           ),
         ),
@@ -63,38 +88,42 @@ class AppTheme {
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.cardSurface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(30),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          textStyle: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 14),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(30),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          textStyle: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 14),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.secondary,
+          side: BorderSide(color: Colors.grey.shade300, width: 1.5),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(30),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          textStyle: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 14),
         ),
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: Colors.white,
-        elevation: 8,
-        indicatorColor: const Color(0xFF0F172A).withAlpha(20),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       ),
     );
   }

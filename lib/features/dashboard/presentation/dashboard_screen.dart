@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/date_formatter.dart';
 import '../../category/data/category_repository.dart';
 import '../../category/domain/category.dart';
 import '../../wallet/data/wallet_repository.dart';
 import '../../wallet/domain/wallet.dart';
 import '../application/dashboard_providers.dart';
+import 'widgets/expense_focus_card.dart';
 import 'widgets/hero_balance_card.dart';
 import 'widgets/transaction_list_tile.dart';
-import 'widgets/wallet_card.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -63,13 +63,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header & Greeting
+                // Header: Catat Uang (Left), Notification & Profile (Right)
                 _buildHeader(),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 // Hero Total Balance Card
                 summaryAsync.when(
@@ -79,9 +79,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     monthlyIncome: summary.monthlyIncome,
                     monthlyExpense: summary.monthlyExpense,
                     lockedUntil: summary.lockedUntil,
+                    onAddTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Form Tambah Transaksi akan dibuka!')),
+                      );
+                    },
+                    onScanTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Fitur Pindai Struk akan segera hadir!')),
+                      );
+                    },
                   ),
                   loading: () => const SizedBox(
-                    height: 180,
+                    height: 220,
                     child: Center(child: CircularProgressIndicator()),
                   ),
                   error: (err, stack) => Container(
@@ -93,23 +103,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     child: Text('Gagal memuat ringkasan: $err'),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
 
-                // Active Wallets Section
-                _buildWalletsSection(walletsAsync),
-                const SizedBox(height: 24),
-
-                // Quick Action Buttons
-                _buildQuickActionsSection(context),
-                const SizedBox(height: 24),
-
-                // Recent Transactions Section
+                // Recent Transactions Section (Aktivitas Terbaru)
                 _buildRecentTransactionsSection(
                   recentTxAsync: recentTxAsync,
                   categoryMap: categoryMap,
                   walletMap: walletMap,
                   lockedUntil: summaryAsync.valueOrNull?.lockedUntil,
                 ),
+                const SizedBox(height: 28),
+
+                // Expense Focus Section (Fokus Pengeluaran)
+                const ExpenseFocusCard(),
+                const SizedBox(height: 100), // Extra padding for floating bottom nav
               ],
             ),
           ),
@@ -120,215 +127,66 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildHeader() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Halo, Selamat Datang! 👋',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 2),
-            const Text(
-              'CatatUang',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0F172A),
-              ),
-            ),
-          ],
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            DateFormatter.formatShortDate(DateTime.now()),
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF0F172A),
-            ),
+        // App Title on Left
+        Text(
+          'Catat Uang',
+          style: GoogleFonts.manrope(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: AppColors.primary,
+            letterSpacing: -0.5,
           ),
         ),
-      ],
-    );
-  }
+        const Spacer(),
 
-  Widget _buildWalletsSection(AsyncValue<List<Wallet>> walletsAsync) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Kantong Saya',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0F172A),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Manajemen Kantong akan hadir pada Tab Pengaturan.'),
-                  ),
-                );
-              },
-              child: const Text('Kelola'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        walletsAsync.when(
-          skipLoadingOnReload: true,
-          data: (wallets) {
-            if (wallets.isEmpty) {
-              return Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: const Text('Belum ada kantong aktif.'),
-              );
-            }
-
-            return SizedBox(
-              height: 110,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: wallets.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final wallet = wallets[index];
-                  return WalletCard(wallet: wallet);
-                },
-              ),
+        // Notification Icon
+        IconButton(
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Tidak ada notifikasi baru.')),
             );
           },
-          loading: () => const SizedBox(
-            height: 110,
-            child: Center(child: CircularProgressIndicator()),
+          icon: Icon(
+            Icons.notifications_none_rounded,
+            color: Colors.grey.shade700,
+            size: 24,
           ),
-          error: (err, stack) => Text('Error: $err'),
+        ),
+        const SizedBox(width: 4),
+
+        // Profile Avatar
+        GestureDetector(
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Profil Pengguna akan hadir di Tab Pengaturan.')),
+            );
+          },
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppColors.secondary,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(20),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.person_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
         ),
       ],
-    );
-  }
-
-  Widget _buildQuickActionsSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Aksi Cepat',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF0F172A),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                label: 'Pemasukan',
-                icon: Icons.add_circle_outline,
-                color: AppColors.income,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Form Pemasukan akan segera dibuka!')),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildActionButton(
-                label: 'Pengeluaran',
-                icon: Icons.remove_circle_outline,
-                color: AppColors.expense,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Form Pengeluaran akan segera dibuka!')),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildActionButton(
-                label: 'Transfer',
-                icon: Icons.swap_horiz,
-                color: AppColors.transfer,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Form Transfer akan segera dibuka!')),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withAlpha(25),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -344,27 +202,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Transaksi Terakhir',
-              style: TextStyle(
-                fontSize: 16,
+            Text(
+              'Aktivitas Terbaru',
+              style: GoogleFonts.manrope(
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF0F172A),
+                color: AppColors.secondary,
               ),
             ),
             TextButton(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Daftar riwayat lengkap ada di Tab Transaksi.'),
+                    content: Text('Daftar riwayat lengkap ada di Tab Riwayat.'),
                   ),
                 );
               },
-              child: const Text('Lihat Semua'),
+              child: Text(
+                'Lihat Semua',
+                style: GoogleFonts.hankenGrotesk(
+                  color: AppColors.primary.withAlpha(200),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         recentTxAsync.when(
           skipLoadingOnReload: true,
           data: (transactions) {
@@ -375,7 +239,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             return ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: transactions.length,
+              itemCount: transactions.length > 3 ? 3 : transactions.length,
               itemBuilder: (context, index) {
                 final tx = transactions[index];
                 final category = tx.categorySyncId != null ? categoryMap[tx.categorySyncId] : null;
@@ -408,38 +272,38 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.shade100),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.background,
+            decoration: const BoxDecoration(
+              color: AppColors.neutral,
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.receipt_long_outlined,
-              size: 40,
+              size: 36,
               color: Colors.grey.shade400,
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Belum Ada Catatan Keuangan',
-            style: TextStyle(
-              fontSize: 15,
+            style: GoogleFonts.manrope(
+              fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF0F172A),
+              color: AppColors.secondary,
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            'Belum ada pengeluaran atau pemasukan bulan ini.\nKetuk tombol aksi cepat di atas untuk mencatat.',
+            'Belum ada pengeluaran atau pemasukan bulan ini.\nKetuk tombol + Tambah di atas untuk mencatat.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
+            style: GoogleFonts.hankenGrotesk(
+              fontSize: 13,
               color: Colors.grey.shade600,
               height: 1.4,
             ),

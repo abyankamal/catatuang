@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
@@ -59,32 +60,35 @@ class TransactionListTile extends StatelessWidget {
     final iconData = _getIconData(category?.icon) ?? defaultIcon;
     final isCategoryActive = category?.isActive ?? true;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               // Category Icon container
               Stack(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
-                      color: category?.colorValue != null
-                          ? Color(category!.colorValue).withAlpha(30)
-                          : amountColor.withAlpha(30),
-                      shape: BoxShape.circle,
+                      color: AppColors.neutral,
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(
                       iconData,
                       color: category?.colorValue != null
                           ? Color(category!.colorValue)
-                          : amountColor,
+                          : AppColors.secondary,
                       size: 22,
                     ),
                   ),
@@ -93,13 +97,13 @@ class TransactionListTile extends StatelessWidget {
                       right: 0,
                       bottom: 0,
                       child: Container(
-                        padding: const EdgeInsets.all(2),
+                        padding: const EdgeInsets.all(3),
                         decoration: const BoxDecoration(
                           color: Colors.amber,
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
-                          Icons.lock,
+                          Icons.lock_rounded,
                           size: 10,
                           color: Colors.white,
                         ),
@@ -114,29 +118,24 @@ class TransactionListTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            categoryName,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: isCategoryActive ? const Color(0xFF0F172A) : Colors.grey.shade500,
-                              decoration: isCategoryActive ? TextDecoration.none : TextDecoration.lineThrough,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      categoryName,
+                      style: GoogleFonts.manrope(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isCategoryActive ? AppColors.secondary : Colors.grey.shade500,
+                        decoration: isCategoryActive ? TextDecoration.none : TextDecoration.lineThrough,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '${DateFormatter.formatShortDate(transaction.date)} • $walletName',
-                      style: TextStyle(
+                      style: GoogleFonts.hankenGrotesk(
                         fontSize: 12,
-                        color: Colors.grey.shade600,
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -149,9 +148,9 @@ class TransactionListTile extends StatelessWidget {
                 children: [
                   Text(
                     '$prefix${CurrencyFormatter.format(transaction.amount)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                    style: GoogleFonts.manrope(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
                       color: amountColor,
                     ),
                   ),
@@ -159,7 +158,7 @@ class TransactionListTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       transaction.description!,
-                      style: TextStyle(
+                      style: GoogleFonts.hankenGrotesk(
                         fontSize: 11,
                         color: Colors.grey.shade500,
                       ),
