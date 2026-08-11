@@ -5,10 +5,17 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 
 class ExpenseFocusCard extends StatelessWidget {
-  const ExpenseFocusCard({super.key});
+  final double monthlyExpense;
+
+  const ExpenseFocusCard({
+    super.key,
+    this.monthlyExpense = 0.0,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isEmpty = monthlyExpense == 0;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -36,64 +43,134 @@ class ExpenseFocusCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Center(
-            child: SizedBox(
-              width: 170,
-              height: 170,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Dual Circular Arc Painter
-                  CustomPaint(
-                    size: const Size(170, 170),
-                    painter: _FocusRingPainter(
-                      primaryProgress: 0.68,
-                      tertiaryProgress: 0.35,
-                      primaryColor: AppColors.primary,
-                      tertiaryColor: AppColors.tertiary,
-                    ),
-                  ),
-
-                  // Center Label
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'MINGGUAN',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.grey.shade500,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        '68%',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.secondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          // Legend Items
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildLegendItem('Tempat Tinggal', AppColors.primary),
-              _buildLegendItem('Makanan', AppColors.tertiary),
-            ],
-          ),
+          if (isEmpty)
+            _buildEmptyState()
+          else
+            _buildChartData(),
         ],
       ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Column(
+      children: [
+        Center(
+          child: SizedBox(
+            width: 170,
+            height: 170,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 156,
+                  height: 156,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.grey.shade100,
+                      width: 14,
+                    ),
+                  ),
+                ),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.pie_chart_outline_rounded,
+                      color: Colors.grey.shade300,
+                      size: 32,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'BELUM ADA',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.grey.shade400,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Center(
+          child: Text(
+            'Belum ada data pengeluaran bulan ini.',
+            style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChartData() {
+    return Column(
+      children: [
+        Center(
+          child: SizedBox(
+            width: 170,
+            height: 170,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Dual Circular Arc Painter
+                CustomPaint(
+                  size: const Size(170, 170),
+                  painter: _FocusRingPainter(
+                    primaryProgress: 0.68,
+                    tertiaryProgress: 0.35,
+                    primaryColor: AppColors.primary,
+                    tertiaryColor: AppColors.tertiary,
+                  ),
+                ),
+
+                // Center Label
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'MINGGUAN',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.grey.shade500,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      '68%',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.secondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        
+        // Legend Items
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildLegendItem('Tempat Tinggal', AppColors.primary),
+            _buildLegendItem('Makanan', AppColors.tertiary),
+          ],
+        ),
+      ],
     );
   }
 

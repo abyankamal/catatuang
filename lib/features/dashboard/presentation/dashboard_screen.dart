@@ -3,10 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../category/data/category_repository.dart';
 import '../../category/domain/category.dart';
-import '../../transaction/data/transaction_repository.dart';
-import '../../wallet/data/wallet_repository.dart';
 import '../../wallet/domain/wallet.dart';
 import '../application/dashboard_providers.dart';
 import 'widgets/expense_focus_card.dart';
@@ -21,20 +18,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Seed default data safely if database is fresh
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        await ref.read(categoryRepositoryProvider).seedDefaultCategoriesIfEmpty();
-        await ref.read(walletRepositoryProvider).seedDefaultWalletIfEmpty();
-        await ref.read(transactionRepositoryProvider).seedDemoTransactionsIfEmpty();
-      } catch (e, st) {
-        debugPrint('Gagal melakukan seeding data default: $e\n$st');
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +43,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         walletMap[w.syncId] = w;
       }
     });
+
+    final bool hasWallets = walletMap.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -91,7 +76,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         monthlyIncome: summary.monthlyIncome,
                         monthlyExpense: summary.monthlyExpense,
                         lockedUntil: summary.lockedUntil,
-                        onAddTap: () => context.push('/add_transaction'),
+                        hasWallets: hasWallets,
+                        onAddTap: () {
+                          if (hasWallets) {
+                            context.push('/add_transaction');
+                          } else {
+                            context.push('/add_wallet');
+                          }
+                        },
                         onScanTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Fitur Pindai Struk akan segera hadir!')),
@@ -119,11 +111,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       categoryMap: categoryMap,
                       walletMap: walletMap,
                       lockedUntil: summaryAsync.valueOrNull?.lockedUntil,
+                      hasWallets: hasWallets,
                     ),
                     const SizedBox(height: 28),
 
                     // Expense Focus Section (Fokus Pengeluaran)
-                    const ExpenseFocusCard(),
+                    ExpenseFocusCard(
+                      monthlyExpense: summaryAsync.valueOrNull?.monthlyExpense ?? 0.0,
+                    ),
                     const SizedBox(height: 100), // Extra padding for floating bottom nav
                   ],
                 ),
@@ -205,6 +200,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     required Map<String, Category> categoryMap,
     required Map<String, Wallet> walletMap,
     DateTime? lockedUntil,
+    required bool hasWallets,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,7 +239,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           skipLoadingOnReload: true,
           data: (transactions) {
             if (transactions.isEmpty) {
-              return _buildEmptyState();
+              return _buildEmptyState(hasWallets: hasWallets);
             }
 
             return ListView.builder(
@@ -276,7 +272,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState({required bool hasWallets}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
@@ -300,9 +296,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Belum Ada Catatan Keuangan',
-            style: TextStyle(
+          Text(
+            hasWallets ? 'Belum Ada Catatan Keuangan' : 'Kamu Belum Punya Dompet',
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AppColors.secondary,
@@ -310,7 +306,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Belum ada pengeluaran atau pemasukan bulan ini.\nKetuk tombol + Tambah di atas untuk mencatat.',
+            hasWallets
+                ? 'Belum ada pengeluaran atau pemasukan bulan ini.\nKetuk tombol + Tambah di atas untuk mencatat.'
+                : 'Silakan buat dompet pertama kamu untuk mulai mencatat arus kas.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,

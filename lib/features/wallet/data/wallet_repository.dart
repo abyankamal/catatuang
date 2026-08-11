@@ -3,7 +3,6 @@ import 'package:isar/isar.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/database_provider.dart';
-import '../../../core/utils/dummy_data.dart';
 import '../domain/wallet.dart';
 
 final walletRepositoryProvider = Provider<WalletRepository>((ref) {
@@ -77,18 +76,4 @@ class WalletRepository {
     return goal;
   }
 
-  /// Inisialisasi wallet default & demo jika database masih kosong
-  Future<void> seedDefaultWalletIfEmpty() async {
-    final count = await _isar.wallets.count();
-    if (count == 0) {
-      await _isar.writeTxn(() async {
-        for (final w in DummyData.wallets) {
-          await _isar.wallets.put(w);
-        }
-        for (final g in DummyData.goals) {
-          await _isar.wallets.put(g);
-        }
-      });
-    }
-  }
 }

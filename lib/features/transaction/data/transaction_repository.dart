@@ -7,7 +7,6 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/database/database_provider.dart';
 import '../../../core/exceptions/locked_period_exception.dart';
-import '../../../core/utils/dummy_data.dart';
 import '../../settings/domain/app_settings.dart';
 import '../../wallet/domain/wallet.dart';
 import '../domain/transaction.dart';
@@ -32,18 +31,6 @@ class TransactionRepository {
   final _uuid = const Uuid();
 
   TransactionRepository(this._isar);
-
-  /// Seed demo transactions if database is empty
-  Future<void> seedDemoTransactionsIfEmpty() async {
-    final count = await _isar.transactions.where().count();
-    if (count == 0) {
-      await _isar.writeTxn(() async {
-        for (final tx in DummyData.transactions) {
-          await _isar.transactions.put(tx);
-        }
-      });
-    }
-  }
 
   /// Watch recent transactions sorted by date descending
   Stream<List<Transaction>> watchRecentTransactions({int limit = 10}) {

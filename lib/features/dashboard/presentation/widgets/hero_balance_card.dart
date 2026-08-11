@@ -9,6 +9,7 @@ class HeroBalanceCard extends StatelessWidget {
   final double monthlyIncome;
   final double monthlyExpense;
   final DateTime? lockedUntil;
+  final bool hasWallets;
   final VoidCallback? onAddTap;
   final VoidCallback? onScanTap;
 
@@ -18,6 +19,7 @@ class HeroBalanceCard extends StatelessWidget {
     required this.monthlyIncome,
     required this.monthlyExpense,
     this.lockedUntil,
+    this.hasWallets = true,
     this.onAddTap,
     this.onScanTap,
   });
@@ -151,8 +153,8 @@ class HeroBalanceCard extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: onAddTap ?? () {},
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Tambah Transaksi'),
+              icon: Icon(hasWallets ? Icons.add_rounded : Icons.account_balance_wallet_rounded, size: 18),
+              label: Text(hasWallets ? 'Tambah Transaksi' : 'Buat Dompet Pertama'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
