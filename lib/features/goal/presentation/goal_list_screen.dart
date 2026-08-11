@@ -29,15 +29,6 @@ class GoalListScreen extends ConsumerWidget {
             fontSize: 20,
           ),
         ),
-        centerTitle: false,
-        actions: [
-          IconButton(
-            onPressed: () => context.push('/add_goal'),
-            icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primary, size: 28),
-            tooltip: 'Tambah Target Tabungan',
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -58,9 +49,7 @@ class GoalListScreen extends ConsumerWidget {
               },
             );
           },
-          loading: () => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) => Center(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -69,18 +58,6 @@ class GoalListScreen extends ConsumerWidget {
                 style: GoogleFonts.outfit(color: AppColors.expense),
               ),
             ),
-          ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/add_goal'),
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: Text(
-          'Tambah Target',
-          style: GoogleFonts.outfit(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
           ),
         ),
       ),
@@ -120,7 +97,11 @@ class GoalListScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () => context.push('/add_goal'),
-              icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+              icon: const Icon(
+                Icons.add_rounded,
+                size: 18,
+                color: Colors.white,
+              ),
               label: Text(
                 'Buat Target Sekarang',
                 style: GoogleFonts.outfit(
@@ -130,7 +111,10 @@ class GoalListScreen extends ConsumerWidget {
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
