@@ -18,7 +18,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-
   @override
   Widget build(BuildContext context) {
     final summaryAsync = ref.watch(dashboardSummaryProvider);
@@ -26,7 +25,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final recentTxAsync = ref.watch(recentTransactionsStreamProvider);
     final categoriesAsync = ref.watch(activeCategoriesStreamProvider);
 
-    debugPrint('DASHBOARD BUILD: summary=$summaryAsync, wallets=$walletsAsync, tx=$recentTxAsync, cat=$categoriesAsync');
+    debugPrint(
+      'DASHBOARD BUILD: summary=$summaryAsync, wallets=$walletsAsync, tx=$recentTxAsync, cat=$categoriesAsync',
+    );
 
     // Build Category lookup map
     final Map<String, Category> categoryMap = {};
@@ -86,7 +87,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         },
                         onScanTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Fitur Pindai Struk akan segera hadir!')),
+                            const SnackBar(
+                              content: Text(
+                                'Fitur Pindai Struk akan segera hadir!',
+                              ),
+                            ),
                           );
                         },
                       ),
@@ -117,9 +122,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
                     // Expense Focus Section (Fokus Pengeluaran)
                     ExpenseFocusCard(
-                      monthlyExpense: summaryAsync.valueOrNull?.monthlyExpense ?? 0.0,
+                      monthlyExpense:
+                          summaryAsync.valueOrNull?.monthlyExpense ?? 0.0,
                     ),
-                    const SizedBox(height: 100), // Extra padding for floating bottom nav
+                    const SizedBox(
+                      height: 100,
+                    ), // Extra padding for floating bottom nav
                   ],
                 ),
               ),
@@ -157,30 +165,49 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       }
     }
 
+    // Time-based greeting helper
+    String getTimeBasedGreeting() {
+      final hour = DateTime.now().hour;
+      if (hour >= 4 && hour < 11) {
+        return 'Selamat Pagi';
+      } else if (hour >= 11 && hour < 15) {
+        return 'Selamat Siang';
+      } else if (hour >= 15 && hour < 18) {
+        return 'Selamat Sore';
+      } else {
+        return 'Selamat Malam';
+      }
+    }
+
+    final greeting = getTimeBasedGreeting();
+    final greetingText = userName != null && userName.isNotEmpty
+        ? '$greeting, $userName!'
+        : '$greeting!';
+
     return Row(
       children: [
-        // App Title or Greeting on Left
+        // App Title on Top (Big & Purple) & Greeting below (Small & Black)
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              userName != null && userName.isNotEmpty ? 'Halo, $userName!' : 'Catat Uang',
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
+            const Text(
+              'Catat Uang',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
                 color: AppColors.primary,
                 letterSpacing: -0.5,
               ),
             ),
-            if (userName != null && userName.isNotEmpty)
-              const Text(
-                'Catat Uang',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.secondary,
-                ),
+            const SizedBox(height: 2),
+            Text(
+              greetingText,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
               ),
+            ),
           ],
         ),
         const Spacer(),
@@ -284,7 +311,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               itemCount: transactions.length > 3 ? 3 : transactions.length,
               itemBuilder: (context, index) {
                 final tx = transactions[index];
-                final category = tx.categorySyncId != null ? categoryMap[tx.categorySyncId] : null;
+                final category = tx.categorySyncId != null
+                    ? categoryMap[tx.categorySyncId]
+                    : null;
                 final wallet = walletMap[tx.walletSyncId];
 
                 return TransactionListTile(
@@ -333,7 +362,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            hasWallets ? 'Belum Ada Catatan Keuangan' : 'Kamu Belum Punya Dompet',
+            hasWallets
+                ? 'Belum Ada Catatan Keuangan'
+                : 'Kamu Belum Punya Dompet',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
