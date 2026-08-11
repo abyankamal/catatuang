@@ -5,6 +5,7 @@ import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/goal/presentation/goal_list_screen.dart';
 import '../../features/goal/presentation/add_goal_screen.dart';
 import '../../features/goal/presentation/top_up_goal_screen.dart';
+import '../../features/report/presentation/report_screen.dart';
 import '../../features/settings/presentation/profile_screen.dart';
 import '../../features/transaction/presentation/add_transaction_screen.dart';
 import '../../features/transaction/presentation/transaction_history_screen.dart';
@@ -40,22 +41,16 @@ final appRouter = GoRouter(
           ],
         ),
 
-        // Tab 3: Laporan
+        // Tab 3: Laporan / Statistik
         StatefulShellBranch(
           routes: [
             GoRoute(
               path: '/reports',
-              builder: (context, state) => const Scaffold(
-                body: Center(
-                  child: Text(
-                    'Halaman Laporan\n(Akan segera diimplementasikan)',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
+              builder: (context, state) => const ReportScreen(),
             ),
           ],
         ),
+
         // Tab 4: Target (Savings Goals)
         StatefulShellBranch(
           routes: [
