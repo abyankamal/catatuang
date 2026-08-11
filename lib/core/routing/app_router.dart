@@ -7,6 +7,7 @@ import '../../features/goal/presentation/add_goal_screen.dart';
 import '../../features/goal/presentation/top_up_goal_screen.dart';
 import '../../features/settings/presentation/profile_screen.dart';
 import '../../features/transaction/presentation/add_transaction_screen.dart';
+import '../../features/transaction/presentation/transaction_history_screen.dart';
 import '../presentation/main_navigation_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -29,22 +30,16 @@ final appRouter = GoRouter(
             ),
           ],
         ),
-        // Tab 2: Transaksi
+        // Tab 2: Transaksi / Riwayat
         StatefulShellBranch(
           routes: [
             GoRoute(
               path: '/transactions',
-              builder: (context, state) => const Scaffold(
-                body: Center(
-                  child: Text(
-                    'Halaman Transaksi\n(Akan segera diimplementasikan)',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
+              builder: (context, state) => const TransactionHistoryScreen(),
             ),
           ],
         ),
+
         // Tab 3: Laporan
         StatefulShellBranch(
           routes: [

@@ -7,9 +7,12 @@ import '../../../core/theme/app_theme.dart';
 import '../../category/data/category_repository.dart';
 import '../../dashboard/application/dashboard_providers.dart';
 import '../application/transaction_controller.dart';
+import '../domain/transaction.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
-  const AddTransactionScreen({super.key});
+  final Transaction? existingTransaction;
+
+  const AddTransactionScreen({super.key, this.existingTransaction});
 
   @override
   ConsumerState<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -18,13 +21,32 @@ class AddTransactionScreen extends ConsumerStatefulWidget {
 class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   final _formKey = GlobalKey<FormState>();
   
-  String _selectedType = 'EXPENSE'; // 'EXPENSE' or 'INCOME'
+  late String _selectedType;
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
 
   String? _selectedWalletSyncId;
   String? _selectedCategorySyncId;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingTransaction != null) {
+      final tx = widget.existingTransaction!;
+      _selectedType = tx.type;
+      _amountController.text = tx.amount.toInt() == tx.amount
+          ? tx.amount.toInt().toString()
+          : tx.amount.toString();
+      _descriptionController.text = tx.description ?? '';
+      _selectedDate = tx.date;
+      _selectedWalletSyncId = tx.walletSyncId;
+      _selectedCategorySyncId = tx.categorySyncId;
+    } else {
+      _selectedType = 'EXPENSE';
+      _selectedDate = DateTime.now();
+    }
+  }
 
   @override
   void dispose() {
@@ -32,6 +54,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     _descriptionController.dispose();
     super.dispose();
   }
+
 
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
@@ -66,16 +89,29 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       return;
     }
 
-    final success = await ref.read(transactionControllerProvider.notifier).addTransaction(
-          type: _selectedType,
-          amount: amount,
-          date: _selectedDate,
-          walletSyncId: _selectedWalletSyncId!,
-          categorySyncId: _selectedCategorySyncId,
-          description: _descriptionController.text.trim().isEmpty
-              ? null
-              : _descriptionController.text.trim(),
-        );
+    final success = widget.existingTransaction != null
+        ? await ref.read(transactionControllerProvider.notifier).updateTransaction(
+              id: widget.existingTransaction!.id,
+              type: _selectedType,
+              amount: amount,
+              date: _selectedDate,
+              walletSyncId: _selectedWalletSyncId!,
+              categorySyncId: _selectedCategorySyncId,
+              description: _descriptionController.text.trim().isEmpty
+                  ? null
+                  : _descriptionController.text.trim(),
+            )
+        : await ref.read(transactionControllerProvider.notifier).addTransaction(
+              type: _selectedType,
+              amount: amount,
+              date: _selectedDate,
+              walletSyncId: _selectedWalletSyncId!,
+              categorySyncId: _selectedCategorySyncId,
+              description: _descriptionController.text.trim().isEmpty
+                  ? null
+                  : _descriptionController.text.trim(),
+            );
+
 
     if (mounted) {
       if (success) {

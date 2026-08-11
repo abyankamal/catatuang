@@ -207,4 +207,162 @@ class TransactionRepository {
       );
     });
   }
+
+  /// Watch transactions for a given month with optional wallet and type filters
+  Stream<List<Transaction>> watchTransactionsByMonth(
+    int year,
+    int month, {
+    String? walletSyncId,
+    String? typeFilter,
+  }) {
+    final startDate = DateTime(year, month, 1);
+    final endDate = DateTime(year, month + 1, 1).subtract(const Duration(microseconds: 1));
+
+    var query = _isar.transactions
+        .filter()
+        .dateBetween(startDate, endDate);
+
+    if (walletSyncId != null && walletSyncId.isNotEmpty) {
+      query = query.walletSyncIdEqualTo(walletSyncId);
+    }
+
+    if (typeFilter != null && typeFilter.isNotEmpty && typeFilter != 'ALL') {
+      query = query.typeEqualTo(typeFilter);
+    }
+
+    return query.sortByDateDesc().watch(fireImmediately: true);
+  }
+
+  /// Delete transaction using the Reversal Pattern (AGENTS.md §4)
+  Future<void> deleteTransaction(int transactionId) async {
+    final tx = await _isar.transactions.get(transactionId);
+    if (tx == null) return;
+
+    // Period locking check
+    final settings = await _isar.appSettings.where().findFirst();
+    if (settings?.lockedUntil != null && !tx.date.isAfter(settings!.lockedUntil!)) {
+      throw LockedPeriodException();
+    }
+
+    await _isar.writeTxn(() async {
+      if (tx.transactionGroupId != null && tx.transactionGroupId!.isNotEmpty) {
+        // Grouped transaction (e.g., Transfer / Savings)
+        final groupTxs = await _isar.transactions
+            .filter()
+            .transactionGroupIdEqualTo(tx.transactionGroupId!)
+            .findAll();
+
+        for (final groupTx in groupTxs) {
+          final wallet = await _isar.wallets
+              .filter()
+              .syncIdEqualTo(groupTx.walletSyncId)
+              .findFirst();
+
+          if (wallet != null) {
+            if (groupTx.type == 'TRANSFER_OUT' || groupTx.type == 'EXPENSE') {
+              wallet.balance += groupTx.amount;
+            } else if (groupTx.type == 'TRANSFER_IN' || groupTx.type == 'INCOME') {
+              wallet.balance -= groupTx.amount;
+            }
+            wallet.updatedAt = DateTime.now();
+            await _isar.wallets.put(wallet);
+          }
+          await _isar.transactions.delete(groupTx.id);
+        }
+      } else {
+        // Standalone Income / Expense
+        final wallet = await _isar.wallets
+            .filter()
+            .syncIdEqualTo(tx.walletSyncId)
+            .findFirst();
+
+        if (wallet != null) {
+          if (tx.type == 'INCOME') {
+            wallet.balance -= tx.amount;
+          } else if (tx.type == 'EXPENSE') {
+            wallet.balance += tx.amount;
+          }
+          wallet.updatedAt = DateTime.now();
+          await _isar.wallets.put(wallet);
+        }
+        await _isar.transactions.delete(tx.id);
+      }
+    });
+  }
+
+  /// Update existing transaction using the Reversal Pattern (AGENTS.md §4)
+  Future<void> updateTransaction({
+    required int id,
+    required String type,
+    required double amount,
+    required DateTime date,
+    required String walletSyncId,
+    String? categorySyncId,
+    String? description,
+  }) async {
+    final oldTx = await _isar.transactions.get(id);
+    if (oldTx == null) {
+      throw Exception('Transaksi tidak ditemukan.');
+    }
+
+    // Period locking check for both old & new date
+    final settings = await _isar.appSettings.where().findFirst();
+    final lockedUntil = settings?.lockedUntil;
+    if (lockedUntil != null) {
+      if (!oldTx.date.isAfter(lockedUntil) || !date.isAfter(lockedUntil)) {
+        throw LockedPeriodException();
+      }
+    }
+
+
+    final now = DateTime.now();
+
+    await _isar.writeTxn(() async {
+      // 1. Revert old transaction effect on old wallet
+      final oldWallet = await _isar.wallets
+          .filter()
+          .syncIdEqualTo(oldTx.walletSyncId)
+          .findFirst();
+
+      if (oldWallet != null) {
+        if (oldTx.type == 'INCOME') {
+          oldWallet.balance -= oldTx.amount;
+        } else if (oldTx.type == 'EXPENSE') {
+          oldWallet.balance += oldTx.amount;
+        }
+        oldWallet.updatedAt = now;
+        await _isar.wallets.put(oldWallet);
+      }
+
+      // 2. Apply new transaction effect on new (or same) wallet
+      final newWallet = (oldWallet != null && oldWallet.syncId == walletSyncId)
+          ? oldWallet
+          : await _isar.wallets.filter().syncIdEqualTo(walletSyncId).findFirst();
+
+      if (newWallet == null) {
+        throw Exception('Dompet tidak ditemukan.');
+      }
+
+      if (type == 'INCOME') {
+        newWallet.balance += amount;
+      } else if (type == 'EXPENSE') {
+        newWallet.balance -= amount;
+      }
+      newWallet.updatedAt = now;
+      await _isar.wallets.put(newWallet);
+
+      // 3. Update the transaction record
+      oldTx
+        ..type = type
+        ..amount = amount
+        ..date = date
+        ..walletSyncId = walletSyncId
+        ..categorySyncId = categorySyncId
+        ..description = description
+        ..updatedAt = now;
+
+      await _isar.transactions.put(oldTx);
+    });
+  }
 }
+
