@@ -25,6 +25,25 @@ void main() async {
   );
 }
 
+/// Custom ScrollBehavior untuk menghilangkan efek memuai (stretch overscroll) secara global
+class NoStretchScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child; // Menghilangkan indikator peregangan/stretch visual
+  }
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    // Menggunakan ClampingScrollPhysics agar posisi tampilan tetap menempel (clamp) tanpa memuai
+    return const ClampingScrollPhysics();
+  }
+
+}
+
 class CatatUangApp extends StatelessWidget {
   const CatatUangApp({super.key});
 
@@ -34,6 +53,7 @@ class CatatUangApp extends StatelessWidget {
       title: 'CatatUang',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      scrollBehavior: NoStretchScrollBehavior(),
       routerConfig: appRouter,
     );
   }
