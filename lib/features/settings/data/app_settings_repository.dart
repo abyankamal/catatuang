@@ -42,4 +42,25 @@ class AppSettingsRepository {
 
     return created;
   }
+
+  Future<void> updateProfile({
+    required String userName,
+    String? avatarIcon,
+  }) async {
+    final settings = await getOrInitSettings();
+    settings.userName = userName;
+    settings.avatarIcon = avatarIcon;
+    settings.updatedAt = DateTime.now();
+
+    await _isar.writeTxn(() async {
+      await _isar.appSettings.put(settings);
+    });
+  }
+
+  /// Reset/hapus seluruh isi database Isar secara instan
+  Future<void> clearAllData() async {
+    await _isar.writeTxn(() async {
+      await _isar.clear();
+    });
+  }
 }

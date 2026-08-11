@@ -5,6 +5,7 @@ import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/goal/presentation/goal_list_screen.dart';
 import '../../features/goal/presentation/add_goal_screen.dart';
 import '../../features/goal/presentation/top_up_goal_screen.dart';
+import '../../features/settings/presentation/profile_screen.dart';
 import '../../features/transaction/presentation/add_transaction_screen.dart';
 import '../presentation/main_navigation_screen.dart';
 
@@ -85,6 +86,10 @@ final appRouter = GoRouter(
         final id = state.pathParameters['id']!;
         return TopUpGoalScreen(goalId: id);
       },
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileScreen(),
     ),
   ],
 );

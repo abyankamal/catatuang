@@ -131,17 +131,57 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildHeader() {
+    final settings = ref.watch(appSettingsStreamProvider).valueOrNull;
+    final userName = settings?.userName;
+    final avatarIcon = settings?.avatarIcon;
+
+    IconData getAvatarIconData(String? iconName) {
+      switch (iconName) {
+        case 'face':
+          return Icons.face_rounded;
+        case 'account_circle':
+          return Icons.account_circle_rounded;
+        case 'work':
+          return Icons.work_rounded;
+        case 'savings':
+          return Icons.savings_rounded;
+        case 'pets':
+          return Icons.pets_rounded;
+        case 'star':
+          return Icons.star_rounded;
+        case 'emoji_emotions':
+          return Icons.emoji_emotions_rounded;
+        case 'person':
+        default:
+          return Icons.person_rounded;
+      }
+    }
+
     return Row(
       children: [
-        // App Title on Left
-        const Text(
-          'Catat Uang',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            color: AppColors.primary,
-            letterSpacing: -0.5,
-          ),
+        // App Title or Greeting on Left
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              userName != null && userName.isNotEmpty ? 'Halo, $userName!' : 'Catat Uang',
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.primary,
+                letterSpacing: -0.5,
+              ),
+            ),
+            if (userName != null && userName.isNotEmpty)
+              const Text(
+                'Catat Uang',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.secondary,
+                ),
+              ),
+          ],
         ),
         const Spacer(),
 
@@ -162,11 +202,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
         // Profile Avatar
         GestureDetector(
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Profil Pengguna akan hadir di Tab Pengaturan.')),
-            );
-          },
+          onTap: () => context.push('/profile'),
           child: Container(
             width: 38,
             height: 38,
@@ -182,9 +218,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ],
             ),
-            child: const Center(
+            child: Center(
               child: Icon(
-                Icons.person_rounded,
+                getAvatarIconData(avatarIcon),
                 color: Colors.white,
                 size: 20,
               ),

@@ -9,6 +9,9 @@ class AppSettings {
   @Index(unique: true)
   late String syncId;
   
+  String? userName;
+  String? avatarIcon;
+
   DateTime? lockedUntil;       // Tanggal terakhir periode terkunci (Tutup Buku)
   
   late DateTime createdAt;
