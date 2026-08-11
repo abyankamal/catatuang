@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -16,151 +17,127 @@ class GoalListScreen extends ConsumerWidget {
     final goalsAsync = ref.watch(activeGoalsStreamProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(activeGoalsStreamProvider);
-          },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 600),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(context),
-                    const SizedBox(height: 24),
-                    goalsAsync.when(
-                      skipLoadingOnReload: true,
-                      data: (goals) {
-                        if (goals.isEmpty) {
-                          return _buildEmptyState(context);
-                        }
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          'Tujuan Tabungan',
+          style: GoogleFonts.outfit(
+            color: AppColors.secondary,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        centerTitle: false,
+        actions: [
+          IconButton(
+            onPressed: () => context.push('/add_goal'),
+            icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primary, size: 28),
+            tooltip: 'Tambah Target Tabungan',
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(activeGoalsStreamProvider);
+        },
+        child: goalsAsync.when(
+          skipLoadingOnReload: true,
+          data: (goals) {
+            if (goals.isEmpty) {
+              return _buildEmptyState(context);
+            }
 
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: goals.length,
-                          itemBuilder: (context, index) {
-                            return _GoalCard(goal: goals[index]);
-                          },
-                        );
-                      },
-                      loading: () => const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(32.0),
-                          child: CircularProgressIndicator(),
-                        ),
-                      ),
-                      error: (err, stack) => Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24.0),
-                          child: Text(
-                            'Gagal memuat target tabungan: $err',
-                            style: const TextStyle(color: AppColors.expense),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 100), // Padding for bottom nav
-                  ],
-                ),
+            return ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              itemCount: goals.length,
+              itemBuilder: (context, index) {
+                return _GoalCard(goal: goals[index]);
+              },
+            );
+          },
+          loading: () => const Center(
+            child: CircularProgressIndicator(),
+          ),
+          error: (err, stack) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Text(
+                'Gagal memuat target tabungan: $err',
+                style: GoogleFonts.outfit(color: AppColors.expense),
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Tujuan Tabungan',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            color: AppColors.secondary,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/add_goal'),
+        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        label: Text(
+          'Tambah Target',
+          style: GoogleFonts.outfit(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          'Wujudkan impianmu pelan-pelan',
-          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(8),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              color: AppColors.neutral,
-              shape: BoxShape.circle,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.track_changes_outlined,
+              size: 64,
+              color: Colors.grey.shade400,
             ),
-            child: Icon(
-              Icons.track_changes_rounded,
-              size: 40,
-              color: AppColors.primary.withAlpha(180),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Belum Ada Target Tabungan',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.secondary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Mulai buat target tabungan untuk impianmu!\nUang yang kamu sisihkan akan aman tersimpan.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => context.push('/add_goal'),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Buat Target Sekarang'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+            const SizedBox(height: 16),
+            Text(
+              'Belum Ada Target Tabungan',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.secondary,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              'Mulai buat target tabungan untuk impianmu!\nUang yang kamu sisihkan akan tersimpan rapi.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => context.push('/add_goal'),
+              icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+              label: Text(
+                'Buat Target Sekarang',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -177,22 +154,15 @@ class _GoalCard extends StatelessWidget {
     final balance = goal.balance;
     final progress = target > 0 ? (balance / target).clamp(0.0, 1.0) : 0.0;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(10),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -202,8 +172,8 @@ class _GoalCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     goal.name,
-                    style: const TextStyle(
-                      fontSize: 18,
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: AppColors.secondary,
                     ),
@@ -220,41 +190,41 @@ class _GoalCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: progress >= 1.0
                         ? Colors.green.shade50
-                        : AppColors.tertiary.withAlpha(25),
+                        : AppColors.primary.withAlpha(20),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     progress >= 1.0
-                        ? 'Tercapai'
+                        ? 'Tercapai 🎉'
                         : '${(progress * 100).toStringAsFixed(0)}%',
-                    style: TextStyle(
+                    style: GoogleFonts.outfit(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: progress >= 1.0
                           ? Colors.green.shade700
-                          : AppColors.tertiary,
+                          : AppColors.primary,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             // Progress Bar
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
                 value: progress,
-                minHeight: 12,
-                backgroundColor: AppColors.neutral,
+                minHeight: 10,
+                backgroundColor: Colors.grey.shade100,
                 valueColor: AlwaysStoppedAnimation<Color>(
                   progress >= 1.0 ? Colors.green : AppColors.primary,
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // Amounts (Fixed overflow layout with Expanded and TextOverflow.ellipsis)
+            // Amounts
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -264,17 +234,17 @@ class _GoalCard extends StatelessWidget {
                     children: [
                       Text(
                         'Terkumpul',
-                        style: TextStyle(
+                        style: GoogleFonts.outfit(
                           fontSize: 12,
-                          color: Colors.grey.shade500,
+                          color: Colors.grey.shade600,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         CurrencyFormatter.format(balance),
-                        style: const TextStyle(
+                        style: GoogleFonts.outfit(
                           fontSize: 15,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.bold,
                           color: AppColors.primary,
                         ),
                         maxLines: 1,
@@ -290,17 +260,17 @@ class _GoalCard extends StatelessWidget {
                     children: [
                       Text(
                         'Target',
-                        style: TextStyle(
+                        style: GoogleFonts.outfit(
                           fontSize: 12,
-                          color: Colors.grey.shade500,
+                          color: Colors.grey.shade600,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         CurrencyFormatter.format(target),
-                        style: const TextStyle(
+                        style: GoogleFonts.outfit(
                           fontSize: 15,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.bold,
                           color: AppColors.secondary,
                         ),
                         maxLines: 1,
@@ -312,7 +282,9 @@ class _GoalCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -327,7 +299,7 @@ class _GoalCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         DateFormatter.formatShortDate(goal.targetDate!),
-                        style: TextStyle(
+                        style: GoogleFonts.outfit(
                           fontSize: 12,
                           color: Colors.grey.shade600,
                           fontWeight: FontWeight.w600,
@@ -340,24 +312,25 @@ class _GoalCard extends StatelessWidget {
 
                 SizedBox(
                   height: 36,
-                  child: OutlinedButton(
+                  child: ElevatedButton.icon(
                     onPressed: () {
                       context.push('/top_up_goal/${goal.syncId}');
                     },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                    child: const Text(
+                    icon: const Icon(Icons.add, size: 16, color: Colors.white),
+                    label: Text(
                       'Nabung',
-                      style: TextStyle(
+                      style: GoogleFonts.outfit(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                     ),
                   ),
                 ),
