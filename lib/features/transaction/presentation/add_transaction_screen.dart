@@ -8,6 +8,7 @@ import '../../category/data/category_repository.dart';
 import '../../dashboard/application/dashboard_providers.dart';
 import '../application/transaction_controller.dart';
 import '../domain/transaction.dart';
+import '../../goal/application/goal_providers.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   final Transaction? existingTransaction;
@@ -73,8 +74,45 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       helpText: 'Pilih Tanggal Transaksi (Bulan Ini)',
     );
     if (picked != null) {
+      final isPickedToday = picked.year == now.year && picked.month == now.month && picked.day == now.day;
+      
+      // Jika tanggal hari ini, gunakan jam realtime. Jika tanggal sebelum hari ini, gunakan jam yang tersimpan atau jam 12:00
+      final hour = isPickedToday ? now.hour : _selectedDate.hour;
+      final minute = isPickedToday ? now.minute : _selectedDate.minute;
+
       setState(() {
-        _selectedDate = picked;
+        _selectedDate = DateTime(
+          picked.year,
+          picked.month,
+          picked.day,
+          hour,
+          minute,
+        );
+      });
+
+      // Otomatis buka pemilih jam jika memilih tanggal sebelum hari ini
+      if (!isPickedToday && mounted) {
+        _selectTime();
+      }
+    }
+  }
+
+  Future<void> _selectTime() async {
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_selectedDate),
+      helpText: 'Pilih Waktu Transaksi',
+    );
+
+    if (pickedTime != null) {
+      setState(() {
+        _selectedDate = DateTime(
+          _selectedDate.year,
+          _selectedDate.month,
+          _selectedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
       });
     }
   }
@@ -161,7 +199,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final walletsAsync = ref.watch(activeWalletsStreamProvider);
+    final walletsAsync = ref.watch(activeRegularWalletsStreamProvider);
     final categoriesAsync = ref.watch(activeCategoriesStreamProvider);
     final controllerState = ref.watch(transactionControllerProvider);
     final isLoading = controllerState.isLoading;

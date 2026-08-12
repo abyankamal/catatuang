@@ -531,8 +531,18 @@ class TransactionHistoryScreen extends ConsumerWidget {
                                 (w) => DropdownMenuItem<String?>(
                                   value: w.syncId,
                                   child: Text(
-                                    w.name,
-                                    style: GoogleFonts.outfit(fontSize: 13),
+                                    w.isGoal
+                                        ? '🎯 ${w.name} (Tabungan)'
+                                        : '💳 ${w.name}',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 13,
+                                      color: w.isGoal
+                                          ? AppColors.primary
+                                          : AppColors.secondary,
+                                      fontWeight: w.isGoal
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
