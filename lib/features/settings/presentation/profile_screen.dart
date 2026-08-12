@@ -369,6 +369,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.secondary),
                           onTap: () => context.push('/wallets'),
                         ),
+                        const SizedBox(height: 16),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withAlpha(20),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.category_rounded, color: Colors.orange),
+                          ),
+                          title: const Text(
+                            'Manajemen Kategori',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                          ),
+                          subtitle: const Text('Kelola kategori pemasukan & pengeluaran'),
+                          trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.secondary),
+                          onTap: () => context.push('/categories'),
+                        ),
                       ],
                     ),
                   ),

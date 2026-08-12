@@ -146,4 +146,41 @@ class CategoryRepository {
       });
     }
   }
+
+  /// Update Kategori
+  Future<Category> updateCategory({
+    required int id,
+    required String name,
+    required String type,
+    String? icon,
+    int? colorValue,
+  }) async {
+    final category = await _isar.categorys.get(id);
+    if (category == null) throw Exception('Kategori tidak ditemukan');
+
+    category.name = name;
+    category.type = type;
+    if (icon != null) category.icon = icon;
+    if (colorValue != null) category.colorValue = colorValue;
+    category.updatedAt = DateTime.now();
+
+    await _isar.writeTxn(() async {
+      await _isar.categorys.put(category);
+    });
+
+    return category;
+  }
+
+  /// Soft Delete Kategori
+  Future<void> softDeleteCategory(int id) async {
+    final category = await _isar.categorys.get(id);
+    if (category == null) throw Exception('Kategori tidak ditemukan');
+
+    category.isActive = false;
+    category.updatedAt = DateTime.now();
+
+    await _isar.writeTxn(() async {
+      await _isar.categorys.put(category);
+    });
+  }
 }

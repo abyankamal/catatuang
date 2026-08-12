@@ -14,6 +14,9 @@ import 'not_found_screen.dart';
 import '../../features/wallet/domain/wallet.dart';
 import '../../features/wallet/presentation/wallet_list_screen.dart';
 import '../../features/wallet/presentation/wallet_form_screen.dart';
+import '../../features/category/domain/category.dart';
+import '../../features/category/presentation/category_list_screen.dart';
+import '../../features/category/presentation/category_form_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -110,6 +113,24 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final wallet = state.extra as Wallet;
         return WalletFormScreen(existingWallet: wallet);
+      },
+    ),
+    GoRoute(
+      path: '/categories',
+      builder: (context, state) => const CategoryListScreen(),
+    ),
+    GoRoute(
+      path: '/categories/add',
+      builder: (context, state) {
+        final type = state.extra as String?;
+        return CategoryFormScreen(initialType: type ?? 'EXPENSE');
+      },
+    ),
+    GoRoute(
+      path: '/categories/edit',
+      builder: (context, state) {
+        final category = state.extra as Category;
+        return CategoryFormScreen(existingCategory: category);
       },
     ),
   ],
