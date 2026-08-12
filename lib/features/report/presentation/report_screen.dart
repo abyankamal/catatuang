@@ -8,8 +8,15 @@ import '../../../core/theme/app_theme.dart';
 import '../application/report_providers.dart';
 import '../data/report_repository.dart';
 
-class ReportScreen extends ConsumerWidget {
+class ReportScreen extends ConsumerStatefulWidget {
   const ReportScreen({super.key});
+
+  @override
+  ConsumerState<ReportScreen> createState() => _ReportScreenState();
+}
+
+class _ReportScreenState extends ConsumerState<ReportScreen> {
+  String _selectedType = 'EXPENSE'; // 'EXPENSE' or 'INCOME'
 
   static const List<String> _monthsIndonesian = [
     'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -174,7 +181,7 @@ class ReportScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final filter = ref.watch(reportFilterProvider);
     final reportAsync = ref.watch(monthlyReportProvider);
 
@@ -253,6 +260,13 @@ class ReportScreen extends ConsumerWidget {
                   return _buildEmptyState();
                 }
 
+                final currentCategories = _selectedType == 'EXPENSE'
+                    ? report.categoryExpenses
+                    : report.categoryIncomes;
+                final currentTotal = _selectedType == 'EXPENSE'
+                    ? report.totalExpense
+                    : report.totalIncome;
+
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -263,16 +277,47 @@ class ReportScreen extends ConsumerWidget {
 
                       const SizedBox(height: 20),
 
-                      // Donut Chart Card (if expense exists)
-                      if (report.totalExpense > 0) ...[
-                        _buildChartCard(report),
+                      // Toggle Button (Pengeluaran vs Pemasukan)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildTypeToggleItem(
+                              label: 'Pengeluaran',
+                              type: 'EXPENSE',
+                              activeColor: AppColors.expense,
+                              icon: Icons.arrow_upward_rounded,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildTypeToggleItem(
+                              label: 'Pemasukan',
+                              type: 'INCOME',
+                              activeColor: AppColors.income,
+                              icon: Icons.arrow_downward_rounded,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Donut Chart Card
+                      if (currentTotal > 0) ...[
+                        _buildChartCard(
+                          categories: currentCategories,
+                          totalAmount: currentTotal,
+                          type: _selectedType,
+                        ),
                         const SizedBox(height: 20),
                       ],
 
                       // Category Breakdown Section
-                      if (report.categoryExpenses.isNotEmpty) ...[
+                      if (currentCategories.isNotEmpty) ...[
                         Text(
-                          'Pengeluaran per Kategori',
+                          _selectedType == 'EXPENSE'
+                              ? 'Pengeluaran per Kategori'
+                              : 'Pemasukan per Kategori',
                           style: GoogleFonts.outfit(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -280,7 +325,30 @@ class ReportScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        _buildCategoryList(report.categoryExpenses),
+                        _buildCategoryList(currentCategories),
+                      ] else if (currentTotal == 0) ...[
+                        Card(
+                          elevation: 0,
+                          margin: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: Colors.grey.shade200),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Center(
+                              child: Text(
+                                _selectedType == 'EXPENSE'
+                                    ? 'Tidak ada pengeluaran pada periode ini.'
+                                    : 'Tidak ada pemasukan pada periode ini.',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                       const SizedBox(height: 24),
                     ],
@@ -290,6 +358,50 @@ class ReportScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTypeToggleItem({
+    required String label,
+    required String type,
+    required Color activeColor,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedType == type;
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedType = type),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor.withAlpha(20) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? activeColor : Colors.grey.shade200,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? activeColor : Colors.grey.shade500,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? activeColor : Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -391,9 +503,11 @@ class ReportScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildChartCard(MonthlyReportData report) {
-    final categories = report.categoryExpenses;
-
+  Widget _buildChartCard({
+    required List<CategoryExpenseSummary> categories,
+    required double totalAmount,
+    required String type,
+  }) {
     final sections = List.generate(categories.length, (index) {
       final item = categories[index];
       final color = _chartColors[index % _chartColors.length];
@@ -410,6 +524,8 @@ class ReportScreen extends ConsumerWidget {
       );
     });
 
+    final isExpense = type == 'EXPENSE';
+
     return Card(
       elevation: 0,
       margin: EdgeInsets.zero,
@@ -422,7 +538,7 @@ class ReportScreen extends ConsumerWidget {
         child: Column(
           children: [
             Text(
-              'Persentase Pengeluaran',
+              isExpense ? 'Persentase Pengeluaran' : 'Persentase Pemasukan',
               style: GoogleFonts.outfit(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -446,7 +562,7 @@ class ReportScreen extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Total Out',
+                          isExpense ? 'Total Out' : 'Total In',
                           style: GoogleFonts.outfit(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -454,11 +570,11 @@ class ReportScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          _formatCurrency(report.totalExpense),
+                          _formatCurrency(totalAmount),
                           style: GoogleFonts.outfit(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.expense,
+                            color: isExpense ? AppColors.expense : AppColors.income,
                           ),
                         ),
                       ],

@@ -36,12 +36,14 @@ class MonthlyReportData {
   final double totalExpense;
   final double netIncome;
   final List<CategoryExpenseSummary> categoryExpenses;
+  final List<CategoryExpenseSummary> categoryIncomes;
 
   const MonthlyReportData({
     required this.totalIncome,
     required this.totalExpense,
     required this.netIncome,
     required this.categoryExpenses,
+    required this.categoryIncomes,
   });
 }
 
@@ -71,6 +73,7 @@ class ReportRepository {
         totalExpense: 0,
         netIncome: 0,
         categoryExpenses: [],
+        categoryIncomes: [],
       );
     }
 
@@ -106,7 +109,8 @@ class ReportRepository {
     double totalIncome = 0.0;
     double totalExpense = 0.0;
 
-    final categoryTotals = <String, double>{};
+    final expenseCategoryTotals = <String, double>{};
+    final incomeCategoryTotals = <String, double>{};
 
     for (final tx in transactions) {
       final type = tx['type'] as String;
@@ -115,42 +119,48 @@ class ReportRepository {
 
       if (type == 'INCOME') {
         totalIncome += amount;
+        final catId = categorySyncId ?? 'uncategorized';
+        incomeCategoryTotals[catId] = (incomeCategoryTotals[catId] ?? 0.0) + amount;
       } else if (type == 'EXPENSE') {
         totalExpense += amount;
         final catId = categorySyncId ?? 'uncategorized';
-        categoryTotals[catId] = (categoryTotals[catId] ?? 0.0) + amount;
+        expenseCategoryTotals[catId] = (expenseCategoryTotals[catId] ?? 0.0) + amount;
       }
     }
 
-    final categorySummaries = <CategoryExpenseSummary>[];
+    List<CategoryExpenseSummary> buildSummaryList(Map<String, double> categoryTotals, double total) {
+      final list = <CategoryExpenseSummary>[];
+      categoryTotals.forEach((catId, amount) {
+        final catInfo = categoryMap[catId];
+        final name = catInfo?['name'] as String? ?? 'Tanpa Kategori';
+        final icon = catInfo?['icon'] as String? ?? 'help_outline';
+        final color = catInfo?['color'] as int? ?? 0xFF5D5CFF;
+        final percentage = total > 0 ? (amount / total) * 100 : 0.0;
 
-    categoryTotals.forEach((catId, amount) {
-      final catInfo = categoryMap[catId];
-      final name = catInfo?['name'] as String? ?? 'Tanpa Kategori';
-      final icon = catInfo?['icon'] as String? ?? 'help_outline';
-      final color = catInfo?['color'] as int? ?? 0xFF5D5CFF;
-      final percentage = totalExpense > 0 ? (amount / totalExpense) * 100 : 0.0;
+        list.add(
+          CategoryExpenseSummary(
+            categorySyncId: catId,
+            categoryName: name,
+            categoryIcon: icon,
+            categoryColor: color,
+            totalAmount: amount,
+            percentage: percentage,
+          ),
+        );
+      });
+      list.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
+      return list;
+    }
 
-      categorySummaries.add(
-        CategoryExpenseSummary(
-          categorySyncId: catId,
-          categoryName: name,
-          categoryIcon: icon,
-          categoryColor: color,
-          totalAmount: amount,
-          percentage: percentage,
-        ),
-      );
-    });
-
-    // Sort by largest expense first
-    categorySummaries.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
+    final categoryExpenses = buildSummaryList(expenseCategoryTotals, totalExpense);
+    final categoryIncomes = buildSummaryList(incomeCategoryTotals, totalIncome);
 
     return MonthlyReportData(
       totalIncome: totalIncome,
       totalExpense: totalExpense,
       netIncome: totalIncome - totalExpense,
-      categoryExpenses: categorySummaries,
+      categoryExpenses: categoryExpenses,
+      categoryIncomes: categoryIncomes,
     );
   }
 }
