@@ -57,11 +57,20 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
 
   Future<void> _selectDate() async {
+    final now = DateTime.now();
+    final firstDayOfMonth = DateTime(now.year, now.month, 1);
+    final today = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+    final initialDate = _selectedDate.isAfter(today)
+        ? today
+        : (_selectedDate.isBefore(firstDayOfMonth) ? firstDayOfMonth : _selectedDate);
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: initialDate,
+      firstDate: firstDayOfMonth,
+      lastDate: today,
+      helpText: 'Pilih Tanggal Transaksi (Bulan Ini)',
     );
     if (picked != null) {
       setState(() {
@@ -72,6 +81,21 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final now = DateTime.now();
+    final firstDayOfMonth = DateTime(now.year, now.month, 1);
+    final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+    if (_selectedDate.isAfter(endOfToday) || _selectedDate.isBefore(firstDayOfMonth)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tanggal transaksi hanya diperbolehkan untuk bulan ini dan maksimal hari ini.'),
+          backgroundColor: AppColors.expense,
+        ),
+      );
+      return;
+    }
+
     if (_selectedWalletSyncId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Silakan pilih dompet terlebih dahulu.')),
@@ -324,16 +348,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 },
                               );
                             }),
-                            ActionChip(
-                              avatar: const Icon(Icons.add_rounded, size: 16, color: AppColors.primary),
-                              label: const Text('Kategori Baru'),
-                              backgroundColor: AppColors.neutral,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(color: AppColors.primary.withAlpha(80)),
-                              ),
-                              onPressed: () => _showAddCategoryBottomSheet(context),
-                            ),
                           ],
                         );
                       },
@@ -398,8 +412,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       child: ElevatedButton(
                         onPressed: isLoading ? null : _submit,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              _selectedType == 'INCOME' ? AppColors.income : AppColors.expense,
+                          backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
