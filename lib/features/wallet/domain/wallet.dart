@@ -23,4 +23,19 @@ class Wallet {
 
   late DateTime createdAt;
   late DateTime updatedAt;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id == Isar.autoIncrement ? null : id,
+      'syncId': syncId,
+      'name': name,
+      'balance': balance,
+      'isActive': isActive,
+      'isGoal': isGoal,
+      'targetAmount': targetAmount,
+      'targetDate': targetDate?.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
 }

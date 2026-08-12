@@ -32,4 +32,21 @@ class Transaction {
   
   late DateTime createdAt;
   late DateTime updatedAt;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id == Isar.autoIncrement ? null : id,
+      'syncId': syncId,
+      'type': type,
+      'amount': amount,
+      'date': date.toIso8601String(),
+      'description': description,
+      'walletSyncId': walletSyncId,
+      'categorySyncId': categorySyncId,
+      'transactionGroupId': transactionGroupId,
+      'debtSyncId': debtSyncId,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
 }
