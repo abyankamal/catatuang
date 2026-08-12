@@ -95,6 +95,10 @@ final appRouter = GoRouter(
       builder: (context, state) => const WalletFormScreen(),
     ),
     GoRoute(
+      path: '/add_wallet',
+      builder: (context, state) => const WalletFormScreen(),
+    ),
+    GoRoute(
       path: '/wallets/edit',
       builder: (context, state) {
         final wallet = state.extra as Wallet;

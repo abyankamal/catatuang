@@ -82,7 +82,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           if (hasWallets) {
                             context.push('/add_transaction');
                           } else {
-                            context.push('/add_wallet');
+                            context.push('/wallets/add');
                           }
                         },
                         onScanTap: () {
