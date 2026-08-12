@@ -29,6 +29,19 @@ class TransactionHistoryFilter {
       selectedType: selectedType ?? this.selectedType,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is TransactionHistoryFilter &&
+        other.year == year &&
+        other.month == month &&
+        other.walletSyncId == walletSyncId &&
+        other.selectedType == selectedType;
+  }
+
+  @override
+  int get hashCode => Object.hash(year, month, walletSyncId, selectedType);
 }
 
 class TransactionHistoryFilterNotifier extends StateNotifier<TransactionHistoryFilter> {
@@ -39,18 +52,22 @@ class TransactionHistoryFilterNotifier extends StateNotifier<TransactionHistoryF
         ));
 
   void setMonth(int year, int month) {
+    if (state.year == year && state.month == month) return;
     state = state.copyWith(year: year, month: month);
   }
 
   void setWallet(String? walletSyncId) {
-    if (walletSyncId == null || walletSyncId.isEmpty) {
+    final targetId = (walletSyncId == null || walletSyncId.isEmpty) ? null : walletSyncId;
+    if (state.walletSyncId == targetId) return;
+    if (targetId == null) {
       state = state.copyWith(clearWallet: true);
     } else {
-      state = state.copyWith(walletSyncId: walletSyncId);
+      state = state.copyWith(walletSyncId: targetId);
     }
   }
 
   void setType(String type) {
+    if (state.selectedType == type) return;
     state = state.copyWith(selectedType: type);
   }
 }
