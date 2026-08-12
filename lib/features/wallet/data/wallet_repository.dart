@@ -76,4 +76,61 @@ class WalletRepository {
     return goal;
   }
 
+  /// Buat Dompet Reguler baru
+  Future<Wallet> createWallet({
+    required String name,
+    double initialBalance = 0.0,
+  }) async {
+    final now = DateTime.now();
+    final wallet = Wallet()
+      ..syncId = _uuid.v4()
+      ..name = name
+      ..balance = initialBalance
+      ..isGoal = false
+      ..isActive = true
+      ..createdAt = now
+      ..updatedAt = now;
+
+    await _isar.writeTxn(() async {
+      await _isar.wallets.put(wallet);
+    });
+
+    return wallet;
+  }
+
+  /// Update nama dompet
+  Future<Wallet> updateWallet({
+    required int id,
+    required String name,
+  }) async {
+    final wallet = await _isar.wallets.get(id);
+    if (wallet == null) {
+      throw Exception('Dompet tidak ditemukan');
+    }
+
+    wallet.name = name;
+    wallet.updatedAt = DateTime.now();
+
+    await _isar.writeTxn(() async {
+      await _isar.wallets.put(wallet);
+    });
+
+    return wallet;
+  }
+
+  /// Soft Delete dompet (Ubah isActive menjadi false)
+  Future<void> softDeleteWallet(int id) async {
+    final wallet = await _isar.wallets.get(id);
+    if (wallet == null) {
+      throw Exception('Dompet tidak ditemukan');
+    }
+
+    // DILARANG keras menghapus data permanen agar history transaksi tidak rusak
+    wallet.isActive = false;
+    wallet.updatedAt = DateTime.now();
+
+    await _isar.writeTxn(() async {
+      await _isar.wallets.put(wallet);
+    });
+  }
 }

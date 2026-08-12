@@ -11,6 +11,9 @@ import '../../features/transaction/presentation/add_transaction_screen.dart';
 import '../../features/transaction/presentation/transaction_history_screen.dart';
 import '../presentation/main_navigation_screen.dart';
 import 'not_found_screen.dart';
+import '../../features/wallet/domain/wallet.dart';
+import '../../features/wallet/presentation/wallet_list_screen.dart';
+import '../../features/wallet/presentation/wallet_form_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -82,6 +85,21 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/profile',
       builder: (context, state) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: '/wallets',
+      builder: (context, state) => const WalletListScreen(),
+    ),
+    GoRoute(
+      path: '/wallets/add',
+      builder: (context, state) => const WalletFormScreen(),
+    ),
+    GoRoute(
+      path: '/wallets/edit',
+      builder: (context, state) {
+        final wallet = state.extra as Wallet;
+        return WalletFormScreen(existingWallet: wallet);
+      },
     ),
   ],
 );

@@ -330,6 +330,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(height: 32),
 
+                  // Pengaturan Lanjutan
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.grey.shade100),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Pengaturan Lanjutan',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.secondary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withAlpha(20),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary),
+                          ),
+                          title: const Text(
+                            'Manajemen Dompet',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                          ),
+                          subtitle: const Text('Tambah, edit, atau hapus dompet'),
+                          trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.secondary),
+                          onTap: () => context.push('/wallets'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
                   // Danger Zone (Reset Data)
                   Container(
                     width: double.infinity,
