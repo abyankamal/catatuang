@@ -10,12 +10,14 @@ import '../../features/settings/presentation/profile_screen.dart';
 import '../../features/transaction/presentation/add_transaction_screen.dart';
 import '../../features/transaction/presentation/transaction_history_screen.dart';
 import '../presentation/main_navigation_screen.dart';
+import 'not_found_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/dashboard',
+  errorBuilder: (context, state) => const NotFoundScreen(),
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
