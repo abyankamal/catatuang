@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../category/data/category_repository.dart';
 import '../../category/domain/category.dart';
+import '../../report/data/report_repository.dart';
 import '../../settings/data/app_settings_repository.dart';
 import '../../settings/domain/app_settings.dart';
 import '../../transaction/data/transaction_repository.dart';
@@ -67,3 +68,12 @@ final dashboardSummaryProvider = FutureProvider<DashboardSummaryState>((ref) asy
     lockedUntil: settings?.lockedUntil,
   );
 });
+
+final dashboardExpenseFocusProvider = FutureProvider<MonthlyReportData>((ref) async {
+  ref.watch(recentTransactionsStreamProvider);
+  ref.watch(activeCategoriesStreamProvider);
+  final repo = ref.watch(reportRepositoryProvider);
+  final now = DateTime.now();
+  return repo.getMonthlyReport(now.year, now.month);
+});
+

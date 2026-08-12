@@ -24,6 +24,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final walletsAsync = ref.watch(activeWalletsStreamProvider);
     final recentTxAsync = ref.watch(recentTransactionsStreamProvider);
     final categoriesAsync = ref.watch(activeCategoriesStreamProvider);
+    final expenseFocusAsync = ref.watch(dashboardExpenseFocusProvider);
 
     debugPrint(
       'DASHBOARD BUILD: summary=$summaryAsync, wallets=$walletsAsync, tx=$recentTxAsync, cat=$categoriesAsync',
@@ -55,6 +56,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ref.invalidate(dashboardSummaryProvider);
             ref.invalidate(activeWalletsStreamProvider);
             ref.invalidate(recentTransactionsStreamProvider);
+            ref.invalidate(dashboardExpenseFocusProvider);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -124,6 +126,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ExpenseFocusCard(
                       monthlyExpense:
                           summaryAsync.valueOrNull?.monthlyExpense ?? 0.0,
+                      categoryExpenses:
+                          expenseFocusAsync.valueOrNull?.categoryExpenses ?? [],
                     ),
                     const SizedBox(
                       height: 100,
