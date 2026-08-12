@@ -76,6 +76,30 @@ class WalletRepository {
     return goal;
   }
 
+  /// Update Tujuan Tabungan (Savings Goal)
+  Future<Wallet> updateGoal({
+    required int id,
+    required String name,
+    required double targetAmount,
+    DateTime? targetDate,
+  }) async {
+    final goal = await _isar.wallets.get(id);
+    if (goal == null || !goal.isGoal) {
+      throw Exception('Tujuan tabungan tidak ditemukan');
+    }
+
+    goal.name = name;
+    goal.targetAmount = targetAmount;
+    goal.targetDate = targetDate;
+    goal.updatedAt = DateTime.now();
+
+    await _isar.writeTxn(() async {
+      await _isar.wallets.put(goal);
+    });
+
+    return goal;
+  }
+
   /// Buat Dompet Reguler baru
   Future<Wallet> createWallet({
     required String name,

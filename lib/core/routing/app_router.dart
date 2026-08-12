@@ -76,6 +76,13 @@ final appRouter = GoRouter(
       builder: (context, state) => const AddGoalScreen(),
     ),
     GoRoute(
+      path: '/edit_goal',
+      builder: (context, state) {
+        final goal = state.extra as Wallet;
+        return AddGoalScreen(existingGoal: goal);
+      },
+    ),
+    GoRoute(
       path: '/top_up_goal/:id',
       builder: (context, state) {
         final id = state.pathParameters['id']!;

@@ -6,8 +6,12 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/goal_providers.dart';
 
+import '../../wallet/domain/wallet.dart';
+
 class AddGoalScreen extends ConsumerStatefulWidget {
-  const AddGoalScreen({super.key});
+  final Wallet? existingGoal;
+
+  const AddGoalScreen({super.key, this.existingGoal});
 
   @override
   ConsumerState<AddGoalScreen> createState() => _AddGoalScreenState();
@@ -15,11 +19,24 @@ class AddGoalScreen extends ConsumerStatefulWidget {
 
 class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _targetController = TextEditingController();
+  late TextEditingController _nameController;
+  late TextEditingController _targetController;
   DateTime? _selectedDate;
 
   bool _isLoading = false;
+  bool get isEditMode => widget.existingGoal != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.existingGoal?.name);
+    
+    final target = widget.existingGoal?.targetAmount;
+    _targetController = TextEditingController(
+      text: target != null ? target.toInt().toString() : '',
+    );
+    _selectedDate = widget.existingGoal?.targetDate;
+  }
 
   @override
   void dispose() {
@@ -31,7 +48,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().add(const Duration(days: 30)),
+      initialDate: _selectedDate ?? DateTime.now().add(const Duration(days: 30)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
     );
@@ -51,16 +68,31 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
     final targetAmount = double.tryParse(_targetController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0.0;
 
     try {
-      await ref.read(goalControllerProvider.notifier).addGoal(
-        name: name,
-        targetAmount: targetAmount,
-        targetDate: _selectedDate,
-      );
+      if (isEditMode) {
+        await ref.read(goalControllerProvider.notifier).updateGoal(
+          id: widget.existingGoal!.id,
+          name: name,
+          targetAmount: targetAmount,
+          targetDate: _selectedDate,
+        );
+      } else {
+        await ref.read(goalControllerProvider.notifier).addGoal(
+          name: name,
+          targetAmount: targetAmount,
+          targetDate: _selectedDate,
+        );
+      }
       
       if (mounted) {
         context.pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Tujuan "$name" berhasil ditambahkan!')),
+          SnackBar(
+            content: Text(
+              isEditMode
+                  ? 'Tujuan "$name" berhasil diperbarui!'
+                  : 'Tujuan "$name" berhasil ditambahkan!',
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -84,7 +116,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: Text(
-          'Tambah Tujuan',
+          isEditMode ? 'Edit Tujuan' : 'Tambah Tujuan',
           style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             color: AppColors.secondary,

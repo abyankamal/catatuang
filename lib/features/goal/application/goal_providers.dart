@@ -70,6 +70,47 @@ class GoalController extends StateNotifier<AsyncValue<void>> {
       state = AsyncValue.error(e, st);
     }
   }
+
+  Future<bool> updateGoal({
+    required int id,
+    required String name,
+    required double targetAmount,
+    DateTime? targetDate,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      await _walletRepo.updateGoal(
+        id: id,
+        name: name,
+        targetAmount: targetAmount,
+        targetDate: targetDate,
+      );
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
+
+  Future<bool> deleteGoal(Wallet goal) async {
+    state = const AsyncValue.loading();
+    try {
+      // Pencegahan (Opsi A): Tidak bisa menghapus jika masih ada saldo tersisa
+      if (goal.balance > 0) {
+        throw Exception(
+          'Tidak dapat menghapus tabungan yang masih memiliki saldo Rp ${goal.balance.toInt()}. Silakan kosongkan saldo terlebih dahulu.',
+        );
+      }
+
+      await _walletRepo.softDeleteWallet(goal.id);
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
 }
 
 final goalControllerProvider = StateNotifierProvider<GoalController, AsyncValue<void>>((ref) {

@@ -127,13 +127,60 @@ class GoalListScreen extends ConsumerWidget {
   }
 }
 
-class _GoalCard extends StatelessWidget {
+class _GoalCard extends ConsumerWidget {
   final Wallet goal;
 
   const _GoalCard({required this.goal});
 
+  void _confirmDelete(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Hapus Tujuan Tabungan?',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          goal.balance > 0
+              ? 'Tabungan "${goal.name}" masih memiliki saldo Rp ${goal.balance.toInt()}. Silakan tarik dana terlebih dahulu sebelum menghapus.'
+              : 'Apakah Anda yakin ingin menghapus tujuan tabungan "${goal.name}"?',
+          style: GoogleFonts.outfit(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal', style: GoogleFonts.outfit(color: Colors.grey.shade600)),
+          ),
+          if (goal.balance <= 0)
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final success = await ref
+                    .read(goalControllerProvider.notifier)
+                    .deleteGoal(goal);
+                if (!success && context.mounted) {
+                  final error = ref.read(goalControllerProvider).error;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(error?.toString() ?? 'Gagal menghapus tabungan'),
+                      backgroundColor: AppColors.expense,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.expense,
+              ),
+              child: Text('Hapus', style: GoogleFonts.outfit(color: Colors.white)),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final target = goal.targetAmount ?? 0;
     final balance = goal.balance;
     final progress = target > 0 ? (balance / target).clamp(0.0, 1.0) : 0.0;
@@ -165,7 +212,7 @@ class _GoalCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -189,6 +236,39 @@ class _GoalCard extends StatelessWidget {
                           : AppColors.primary,
                     ),
                   ),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert_rounded, size: 20, color: Colors.grey),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      context.push('/edit_goal', extra: goal);
+                    } else if (value == 'delete') {
+                      _confirmDelete(context, ref);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.edit_outlined, size: 18, color: Colors.blue),
+                          const SizedBox(width: 8),
+                          Text('Edit', style: GoogleFonts.outfit()),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.delete_outline, size: 18, color: AppColors.expense),
+                          const SizedBox(width: 8),
+                          Text('Hapus', style: GoogleFonts.outfit(color: AppColors.expense)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
