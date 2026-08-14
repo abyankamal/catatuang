@@ -57,6 +57,22 @@ class AppSettingsRepository {
     });
   }
 
+  /// Menandai onboarding selesai dan menyimpan profil pengguna
+  Future<void> completeOnboarding({
+    required String userName,
+    String? avatarIcon,
+  }) async {
+    final settings = await getOrInitSettings();
+    settings.userName = userName;
+    settings.avatarIcon = avatarIcon;
+    settings.hasCompletedOnboarding = true;
+    settings.updatedAt = DateTime.now();
+
+    await _isar.writeTxn(() async {
+      await _isar.appSettings.put(settings);
+    });
+  }
+
   /// Memperbarui tanggal batas periode terkunci (Tutup Buku)
   Future<void> updateLockedUntil(DateTime? lockedUntil) async {
     final settings = await getOrInitSettings();

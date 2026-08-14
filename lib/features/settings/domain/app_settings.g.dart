@@ -27,23 +27,28 @@ const AppSettingsSchema = CollectionSchema(
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
-    r'lockedUntil': PropertySchema(
+    r'hasCompletedOnboarding': PropertySchema(
       id: 2,
+      name: r'hasCompletedOnboarding',
+      type: IsarType.bool,
+    ),
+    r'lockedUntil': PropertySchema(
+      id: 3,
       name: r'lockedUntil',
       type: IsarType.dateTime,
     ),
     r'syncId': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'syncId',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'userName': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'userName',
       type: IsarType.string,
     )
@@ -106,10 +111,11 @@ void _appSettingsSerialize(
 ) {
   writer.writeString(offsets[0], object.avatarIcon);
   writer.writeDateTime(offsets[1], object.createdAt);
-  writer.writeDateTime(offsets[2], object.lockedUntil);
-  writer.writeString(offsets[3], object.syncId);
-  writer.writeDateTime(offsets[4], object.updatedAt);
-  writer.writeString(offsets[5], object.userName);
+  writer.writeBool(offsets[2], object.hasCompletedOnboarding);
+  writer.writeDateTime(offsets[3], object.lockedUntil);
+  writer.writeString(offsets[4], object.syncId);
+  writer.writeDateTime(offsets[5], object.updatedAt);
+  writer.writeString(offsets[6], object.userName);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -121,11 +127,12 @@ AppSettings _appSettingsDeserialize(
   final object = AppSettings();
   object.avatarIcon = reader.readStringOrNull(offsets[0]);
   object.createdAt = reader.readDateTime(offsets[1]);
+  object.hasCompletedOnboarding = reader.readBool(offsets[2]);
   object.id = id;
-  object.lockedUntil = reader.readDateTimeOrNull(offsets[2]);
-  object.syncId = reader.readString(offsets[3]);
-  object.updatedAt = reader.readDateTime(offsets[4]);
-  object.userName = reader.readStringOrNull(offsets[5]);
+  object.lockedUntil = reader.readDateTimeOrNull(offsets[3]);
+  object.syncId = reader.readString(offsets[4]);
+  object.updatedAt = reader.readDateTime(offsets[5]);
+  object.userName = reader.readStringOrNull(offsets[6]);
   return object;
 }
 
@@ -141,12 +148,14 @@ P _appSettingsDeserializeProp<P>(
     case 1:
       return (reader.readDateTime(offset)) as P;
     case 2:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 3:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 4:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 5:
+      return (reader.readDateTime(offset)) as P;
+    case 6:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -552,6 +561,16 @@ extension AppSettingsQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      hasCompletedOnboardingEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'hasCompletedOnboarding',
+        value: value,
       ));
     });
   }
@@ -1059,6 +1078,20 @@ extension AppSettingsQuerySortBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByHasCompletedOnboarding() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasCompletedOnboarding', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByHasCompletedOnboardingDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasCompletedOnboarding', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByLockedUntil() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lockedUntil', Sort.asc);
@@ -1131,6 +1164,20 @@ extension AppSettingsQuerySortThenBy
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByCreatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByHasCompletedOnboarding() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasCompletedOnboarding', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByHasCompletedOnboardingDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasCompletedOnboarding', Sort.desc);
     });
   }
 
@@ -1210,6 +1257,13 @@ extension AppSettingsQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByHasCompletedOnboarding() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'hasCompletedOnboarding');
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByLockedUntil() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'lockedUntil');
@@ -1254,6 +1308,13 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, DateTime, QQueryOperations> createdAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'createdAt');
+    });
+  }
+
+  QueryBuilder<AppSettings, bool, QQueryOperations>
+      hasCompletedOnboardingProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'hasCompletedOnboarding');
     });
   }
 

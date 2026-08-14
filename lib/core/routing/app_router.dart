@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/dashboard/presentation/dashboard_screen.dart';
@@ -6,7 +7,9 @@ import '../../features/goal/presentation/goal_list_screen.dart';
 import '../../features/goal/presentation/add_goal_screen.dart';
 import '../../features/goal/presentation/top_up_goal_screen.dart';
 import '../../features/goal/presentation/withdraw_goal_screen.dart';
+import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/report/presentation/report_screen.dart';
+import '../../features/settings/application/settings_providers.dart';
 import '../../features/settings/presentation/profile_screen.dart';
 import '../../features/transaction/presentation/add_transaction_screen.dart';
 import '../../features/transaction/presentation/transaction_history_screen.dart';
@@ -27,11 +30,34 @@ import '../../features/debt/presentation/debt_form_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
-final appRouter = GoRouter(
-  navigatorKey: _rootNavigatorKey,
-  initialLocation: '/dashboard',
-  errorBuilder: (context, state) => const NotFoundScreen(),
-  routes: [
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final settingsAsync = ref.watch(appSettingsStreamProvider);
+
+  return GoRouter(
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: '/dashboard',
+    errorBuilder: (context, state) => const NotFoundScreen(),
+    redirect: (context, state) {
+      final settings = settingsAsync.valueOrNull;
+      // Jika data settings belum siap (masih loading stream awal), biarkan router melanjutkan
+      if (settings == null) return null;
+
+      final isGoingToOnboarding = state.matchedLocation == '/onboarding';
+      final hasCompleted = settings.hasCompletedOnboarding;
+
+      // Jika belum selesai onboarding dan bukan sedang menuju /onboarding
+      if (!hasCompleted && !isGoingToOnboarding) {
+        return '/onboarding';
+      }
+
+      // Jika sudah selesai onboarding dan mencoba ke /onboarding
+      if (hasCompleted && isGoingToOnboarding) {
+        return '/dashboard';
+      }
+
+      return null;
+    },
+    routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         return MainNavigationScreen(navigationShell: navigationShell);
@@ -182,6 +208,12 @@ final appRouter = GoRouter(
         return ContactFormScreen(existingContact: contact);
       },
     ),
+    // Fitur Onboarding
+    GoRoute(
+      path: '/onboarding',
+      builder: (context, state) => const OnboardingScreen(),
+    ),
   ],
 );
+});
 

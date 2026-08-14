@@ -14,6 +14,8 @@ class AppSettings {
 
   DateTime? lockedUntil;       // Tanggal terakhir periode terkunci (Tutup Buku)
   
+  bool hasCompletedOnboarding = false; // Flag status penyelesaian onboarding
+  
   late DateTime createdAt;
   late DateTime updatedAt;
 }

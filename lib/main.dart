@@ -44,17 +44,19 @@ class NoStretchScrollBehavior extends MaterialScrollBehavior {
 
 }
 
-class CatatUangApp extends StatelessWidget {
+class CatatUangApp extends ConsumerWidget {
   const CatatUangApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(appRouterProvider);
+
     return MaterialApp.router(
       title: 'CatatUang',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       scrollBehavior: NoStretchScrollBehavior(),
-      routerConfig: appRouter,
+      routerConfig: router,
     );
   }
 }
