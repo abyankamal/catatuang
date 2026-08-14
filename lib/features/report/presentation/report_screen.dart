@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../application/report_providers.dart';
+import '../data/pdf_report_service.dart';
 import '../data/report_repository.dart';
 
 class ReportScreen extends ConsumerStatefulWidget {
@@ -180,6 +183,30 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     );
   }
 
+  Future<void> _exportPdf(ReportFilterState filter) async {
+    try {
+      final detailedReport = await ref
+          .read(reportRepositoryProvider)
+          .getDetailedMonthlyReport(filter.year, filter.month);
+
+      await Printing.layoutPdf(
+        name: 'Laporan_Keuangan_${_monthsIndonesian[filter.month - 1]}_${filter.year}',
+        onLayout: (PdfPageFormat format) async {
+          return await PdfReportService.generatePdf(detailedReport);
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengekspor laporan PDF: $e'),
+            backgroundColor: AppColors.expense,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final filter = ref.watch(reportFilterProvider);
@@ -198,6 +225,13 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
             fontSize: 20,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.primary),
+            tooltip: 'Export Laporan PDF',
+            onPressed: () => _exportPdf(filter),
+          ),
+        ],
         centerTitle: false,
       ),
       body: Column(
@@ -350,6 +384,29 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                           ),
                         ),
                       ],
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _exportPdf(filter),
+                          icon: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.primary),
+                          label: Text(
+                            'Export Laporan PDF (${_monthsIndonesian[filter.month - 1]} ${filter.year})',
+                            style: GoogleFonts.outfit(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.primary),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -619,27 +676,34 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          item.categoryName,
-                          style: GoogleFonts.outfit(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.secondary,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              item.categoryName,
+                              style: GoogleFonts.outfit(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.secondary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 12),
                     Row(
                       children: [
                         Text(

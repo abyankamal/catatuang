@@ -6,7 +6,9 @@ import 'package:isar/isar.dart';
 
 import '../../../core/database/database_provider.dart';
 import '../../category/domain/category.dart';
+import '../../settings/domain/app_settings.dart';
 import '../../transaction/domain/transaction.dart';
+import '../../wallet/domain/wallet.dart';
 
 final reportRepositoryProvider = Provider<ReportRepository>((ref) {
   final isar = ref.watch(isarProvider);
@@ -44,6 +46,42 @@ class MonthlyReportData {
     required this.netIncome,
     required this.categoryExpenses,
     required this.categoryIncomes,
+  });
+}
+
+class DetailedTransactionItem {
+  final DateTime date;
+  final String type; // INCOME, EXPENSE, TRANSFER_IN, TRANSFER_OUT
+  final double amount;
+  final String walletName;
+  final String categoryName;
+  final String? notes;
+
+  const DetailedTransactionItem({
+    required this.date,
+    required this.type,
+    required this.amount,
+    required this.walletName,
+    required this.categoryName,
+    this.notes,
+  });
+}
+
+class DetailedMonthlyReport {
+  final int year;
+  final int month;
+  final String userName;
+  final MonthlyReportData summary;
+  final List<Wallet> wallets;
+  final List<DetailedTransactionItem> transactions;
+
+  const DetailedMonthlyReport({
+    required this.year,
+    required this.month,
+    required this.userName,
+    required this.summary,
+    required this.wallets,
+    required this.transactions,
   });
 }
 
@@ -100,6 +138,62 @@ class ReportRepository {
 
     // Heavy computation inside Isolate.run() (AGENTS.md §5)
     return await Isolate.run(() => _aggregateData(txData, catMap));
+  }
+
+  /// Mengambil data laporan bulanan mendalam untuk keperluan Export PDF
+  Future<DetailedMonthlyReport> getDetailedMonthlyReport(int year, int month) async {
+    final summary = await getMonthlyReport(year, month);
+
+    final startDate = DateTime(year, month, 1);
+    final endDate = DateTime(year, month + 1, 1).subtract(const Duration(microseconds: 1));
+
+    final transactions = await _isar.transactions
+        .filter()
+        .dateBetween(startDate, endDate)
+        .sortByDateDesc()
+        .findAll();
+
+    final categories = await _isar.categorys.where().findAll();
+    final wallets = await _isar.wallets.filter().isActiveEqualTo(true).findAll();
+    final settings = await _isar.appSettings.where().findFirst();
+
+    final catNameMap = <String, String>{};
+    for (final c in categories) {
+      catNameMap[c.syncId] = c.name;
+    }
+
+    final walletNameMap = <String, String>{};
+    for (final w in wallets) {
+      walletNameMap[w.syncId] = w.name;
+    }
+
+    final detailedTxList = transactions.map((t) {
+      final categoryName = catNameMap[t.categorySyncId ?? ''] ??
+          (t.type.contains('TRANSFER') ? 'Transfer Dompet' : 'Tanpa Kategori');
+      final walletName = walletNameMap[t.walletSyncId] ?? 'Dompet';
+
+      return DetailedTransactionItem(
+        date: t.date,
+        type: t.type,
+        amount: t.amount,
+        walletName: walletName,
+        categoryName: categoryName,
+        notes: t.description,
+      );
+    }).toList();
+
+    final userName = settings?.userName?.trim().isNotEmpty == true
+        ? settings!.userName!.trim()
+        : 'Pengguna';
+
+    return DetailedMonthlyReport(
+      year: year,
+      month: month,
+      userName: userName,
+      summary: summary,
+      wallets: wallets,
+      transactions: detailedTxList,
+    );
   }
 
   static MonthlyReportData _aggregateData(
