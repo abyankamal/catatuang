@@ -34,44 +34,56 @@ class NotificationRepository {
     if (unpaidDebts.isEmpty) return const [];
 
     final contacts = await _isar.contacts.where().findAll();
-    final contactMap = {for (var c in contacts) c.syncId: c};
 
     final rawDebts = unpaidDebts.map((d) => {
       'id': d.id,
+      'syncId': d.syncId,
       'title': d.title,
       'type': d.type,
       'totalAmount': d.totalAmount,
       'paidAmount': d.paidAmount,
+      'startDate': d.startDate.toIso8601String(),
       'dueDate': d.dueDate!.toIso8601String(),
       'contactSyncId': d.contactSyncId,
+      'notes': d.notes,
+      'isActive': d.isActive,
+      'createdAt': d.createdAt.toIso8601String(),
+      'updatedAt': d.updatedAt.toIso8601String(),
     }).toList();
 
     final rawContacts = contacts.map((c) => {
+      'id': c.id,
       'syncId': c.syncId,
       'name': c.name,
       'phoneNumber': c.phoneNumber,
     }).toList();
 
     if (kIsWeb || rawDebts.length < 50) {
-      return _computeReminders(rawDebts, rawContacts, unpaidDebts, contactMap);
+      return _computeReminders(rawDebts, rawContacts);
     }
 
     return await Isolate.run(() {
-      return _computeReminders(rawDebts, rawContacts, unpaidDebts, contactMap);
+      return _computeReminders(rawDebts, rawContacts);
     });
   }
 
   static List<AppNotificationItem> _computeReminders(
     List<Map<String, dynamic>> rawDebts,
     List<Map<String, dynamic>> rawContacts,
-    List<Debt> originalDebts,
-    Map<String, Contact> contactMap,
   ) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final results = <AppNotificationItem>[];
 
-    final debtLookup = {for (var d in originalDebts) d.id: d};
+    final contactMap = <String, Contact>{};
+    for (final cData in rawContacts) {
+      final contact = Contact()
+        ..id = cData['id'] as int? ?? 0
+        ..syncId = cData['syncId'] as String
+        ..name = cData['name'] as String
+        ..phoneNumber = cData['phoneNumber'] as String?;
+      contactMap[contact.syncId] = contact;
+    }
 
     for (final d in rawDebts) {
       final id = d['id'] as int;
@@ -119,23 +131,35 @@ class NotificationRepository {
       }
 
       if (urgency != null) {
-        final originalDebt = debtLookup[id];
-        if (originalDebt != null) {
-          results.add(
-            AppNotificationItem(
-              id: 'debt_reminder_$id',
-              title: notifTitle,
-              message: notifMessage,
-              type: type,
-              urgency: urgency,
-              debtId: id,
-              debt: originalDebt,
-              contact: contact,
-              dueDate: dueDate,
-              remainingAmount: remaining,
-            ),
-          );
-        }
+        final debtObj = Debt()
+          ..id = id
+          ..syncId = d['syncId'] as String? ?? ''
+          ..title = title
+          ..type = type
+          ..totalAmount = totalAmount
+          ..paidAmount = paidAmount
+          ..startDate = DateTime.tryParse(d['startDate'] as String? ?? '') ?? now
+          ..dueDate = dueDate
+          ..contactSyncId = contactSyncId
+          ..notes = d['notes'] as String?
+          ..isActive = d['isActive'] as bool? ?? true
+          ..createdAt = DateTime.tryParse(d['createdAt'] as String? ?? '') ?? now
+          ..updatedAt = DateTime.tryParse(d['updatedAt'] as String? ?? '') ?? now;
+
+        results.add(
+          AppNotificationItem(
+            id: 'debt_reminder_$id',
+            title: notifTitle,
+            message: notifMessage,
+            type: type,
+            urgency: urgency,
+            debtId: id,
+            debt: debtObj,
+            contact: contact,
+            dueDate: dueDate,
+            remainingAmount: remaining,
+          ),
+        );
       }
     }
 

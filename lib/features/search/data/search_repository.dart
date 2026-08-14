@@ -54,9 +54,68 @@ class SearchRepository {
     final allDebts = await _isar.debts.where().findAll();
     final allContacts = await _isar.contacts.where().findAll();
 
-    final catMap = {for (var c in allCategories) c.syncId: c};
-    final walletMap = {for (var w in allWallets) w.syncId: w};
-    final contactMap = {for (var c in allContacts) c.syncId: c};
+    final rawTransactions = allTransactions.map((tx) => {
+      'id': tx.id,
+      'syncId': tx.syncId,
+      'type': tx.type,
+      'amount': tx.amount,
+      'date': tx.date.toIso8601String(),
+      'description': tx.description,
+      'walletSyncId': tx.walletSyncId,
+      'categorySyncId': tx.categorySyncId,
+      'transactionGroupId': tx.transactionGroupId,
+      'debtSyncId': tx.debtSyncId,
+      'createdAt': tx.createdAt.toIso8601String(),
+      'updatedAt': tx.updatedAt.toIso8601String(),
+    }).toList();
+
+    final rawCategories = allCategories.map((c) => {
+      'id': c.id,
+      'syncId': c.syncId,
+      'name': c.name,
+      'type': c.type,
+      'icon': c.icon,
+      'colorValue': c.colorValue,
+      'isActive': c.isActive,
+    }).toList();
+
+    final rawWallets = allWallets.map((w) => {
+      'id': w.id,
+      'syncId': w.syncId,
+      'name': w.name,
+      'balance': w.balance,
+      'isActive': w.isActive,
+      'isGoal': w.isGoal,
+      'targetAmount': w.targetAmount,
+      'targetDate': w.targetDate?.toIso8601String(),
+      'createdAt': w.createdAt.toIso8601String(),
+      'updatedAt': w.updatedAt.toIso8601String(),
+    }).toList();
+
+    final rawDebts = allDebts.map((d) => {
+      'id': d.id,
+      'syncId': d.syncId,
+      'title': d.title,
+      'type': d.type,
+      'contactSyncId': d.contactSyncId,
+      'totalAmount': d.totalAmount,
+      'paidAmount': d.paidAmount,
+      'startDate': d.startDate.toIso8601String(),
+      'dueDate': d.dueDate?.toIso8601String(),
+      'notes': d.notes,
+      'isActive': d.isActive,
+      'createdAt': d.createdAt.toIso8601String(),
+      'updatedAt': d.updatedAt.toIso8601String(),
+    }).toList();
+
+    final rawContacts = allContacts.map((c) => {
+      'id': c.id,
+      'syncId': c.syncId,
+      'name': c.name,
+      'phoneNumber': c.phoneNumber,
+      'email': c.email,
+      'isActive': c.isActive,
+    }).toList();
 
     // Calculate Date Range
     final now = DateTime.now();
@@ -77,6 +136,7 @@ class SearchRepository {
     }
 
     final parsedNumber = double.tryParse(cleanQuery.replaceAll(RegExp(r'[^0-9]'), ''));
+    final minDateIso = minDate?.toIso8601String();
 
     // Check if we should compute directly or via Isolate (AGENTS.md §5)
     if (kIsWeb || allTransactions.length < 100) {
@@ -84,13 +144,12 @@ class SearchRepository {
         cleanQuery: cleanQuery,
         parsedNumber: parsedNumber,
         typeFilter: typeFilter,
-        minDate: minDate,
-        allTransactions: allTransactions,
-        allDebts: allDebts,
-        allWallets: allWallets,
-        catMap: catMap,
-        walletMap: walletMap,
-        contactMap: contactMap,
+        minDateIso: minDateIso,
+        rawTransactions: rawTransactions,
+        rawDebts: rawDebts,
+        rawWallets: rawWallets,
+        rawCategories: rawCategories,
+        rawContacts: rawContacts,
       );
     }
 
@@ -100,13 +159,12 @@ class SearchRepository {
         cleanQuery: cleanQuery,
         parsedNumber: parsedNumber,
         typeFilter: typeFilter,
-        minDate: minDate,
-        allTransactions: allTransactions,
-        allDebts: allDebts,
-        allWallets: allWallets,
-        catMap: catMap,
-        walletMap: walletMap,
-        contactMap: contactMap,
+        minDateIso: minDateIso,
+        rawTransactions: rawTransactions,
+        rawDebts: rawDebts,
+        rawWallets: rawWallets,
+        rawCategories: rawCategories,
+        rawContacts: rawContacts,
       );
     });
   }
@@ -115,14 +173,92 @@ class SearchRepository {
     required String cleanQuery,
     required double? parsedNumber,
     required SearchTypeFilter typeFilter,
-    required DateTime? minDate,
-    required List<Transaction> allTransactions,
-    required List<Debt> allDebts,
-    required List<Wallet> allWallets,
-    required Map<String, Category> catMap,
-    required Map<String, Wallet> walletMap,
-    required Map<String, Contact> contactMap,
+    required String? minDateIso,
+    required List<Map<String, dynamic>> rawTransactions,
+    required List<Map<String, dynamic>> rawDebts,
+    required List<Map<String, dynamic>> rawWallets,
+    required List<Map<String, dynamic>> rawCategories,
+    required List<Map<String, dynamic>> rawContacts,
   }) {
+    final now = DateTime.now();
+    final minDate = minDateIso != null ? DateTime.parse(minDateIso) : null;
+
+    final catMap = <String, Category>{};
+    for (final cData in rawCategories) {
+      final cat = Category()
+        ..id = cData['id'] as int? ?? 0
+        ..syncId = cData['syncId'] as String
+        ..name = cData['name'] as String
+        ..type = cData['type'] as String
+        ..icon = cData['icon'] as String
+        ..colorValue = cData['colorValue'] as int? ?? 0xFF5D5CFF
+        ..isActive = cData['isActive'] as bool? ?? true;
+      catMap[cat.syncId] = cat;
+    }
+
+    final walletMap = <String, Wallet>{};
+    final allWallets = <Wallet>[];
+    for (final wData in rawWallets) {
+      final wallet = Wallet()
+        ..id = wData['id'] as int? ?? 0
+        ..syncId = wData['syncId'] as String
+        ..name = wData['name'] as String
+        ..balance = wData['balance'] as double? ?? 0.0
+        ..isActive = wData['isActive'] as bool? ?? true
+        ..isGoal = wData['isGoal'] as bool? ?? false
+        ..targetAmount = wData['targetAmount'] as double?
+        ..targetDate = wData['targetDate'] != null ? DateTime.tryParse(wData['targetDate'] as String) : null
+        ..createdAt = DateTime.tryParse(wData['createdAt'] as String? ?? '') ?? now
+        ..updatedAt = DateTime.tryParse(wData['updatedAt'] as String? ?? '') ?? now;
+      walletMap[wallet.syncId] = wallet;
+      allWallets.add(wallet);
+    }
+
+    final contactMap = <String, Contact>{};
+    for (final cData in rawContacts) {
+      final contact = Contact()
+        ..id = cData['id'] as int? ?? 0
+        ..syncId = cData['syncId'] as String
+        ..name = cData['name'] as String
+        ..phoneNumber = cData['phoneNumber'] as String?
+        ..email = cData['email'] as String?
+        ..isActive = cData['isActive'] as bool? ?? true;
+      contactMap[contact.syncId] = contact;
+    }
+
+    final allTransactions = rawTransactions.map((txData) {
+      return Transaction()
+        ..id = txData['id'] as int? ?? 0
+        ..syncId = txData['syncId'] as String
+        ..type = txData['type'] as String
+        ..amount = txData['amount'] as double? ?? 0.0
+        ..date = DateTime.tryParse(txData['date'] as String? ?? '') ?? now
+        ..description = txData['description'] as String?
+        ..walletSyncId = txData['walletSyncId'] as String
+        ..categorySyncId = txData['categorySyncId'] as String?
+        ..transactionGroupId = txData['transactionGroupId'] as String?
+        ..debtSyncId = txData['debtSyncId'] as String?
+        ..createdAt = DateTime.tryParse(txData['createdAt'] as String? ?? '') ?? now
+        ..updatedAt = DateTime.tryParse(txData['updatedAt'] as String? ?? '') ?? now;
+    }).toList();
+
+    final allDebts = rawDebts.map((dData) {
+      return Debt()
+        ..id = dData['id'] as int? ?? 0
+        ..syncId = dData['syncId'] as String
+        ..title = dData['title'] as String
+        ..type = dData['type'] as String
+        ..contactSyncId = dData['contactSyncId'] as String
+        ..totalAmount = dData['totalAmount'] as double? ?? 0.0
+        ..paidAmount = dData['paidAmount'] as double? ?? 0.0
+        ..startDate = DateTime.tryParse(dData['startDate'] as String? ?? '') ?? now
+        ..dueDate = dData['dueDate'] != null ? DateTime.tryParse(dData['dueDate'] as String) : null
+        ..notes = dData['notes'] as String?
+        ..isActive = dData['isActive'] as bool? ?? true
+        ..createdAt = DateTime.tryParse(dData['createdAt'] as String? ?? '') ?? now
+        ..updatedAt = DateTime.tryParse(dData['updatedAt'] as String? ?? '') ?? now;
+    }).toList();
+
     final matchedTx = <EnrichedTransactionItem>[];
     double totalIncome = 0.0;
     double totalExpense = 0.0;

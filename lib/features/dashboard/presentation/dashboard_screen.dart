@@ -32,10 +32,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final expenseFocusAsync = ref.watch(dashboardExpenseFocusProvider);
     final debtSummaryAsync = ref.watch(debtSummaryProvider);
 
-    debugPrint(
-      'DASHBOARD BUILD: summary=$summaryAsync, wallets=$walletsAsync, tx=$recentTxAsync, cat=$categoriesAsync',
-    );
-
     // Build Category lookup map
     final Map<String, Category> categoryMap = {};
     categoriesAsync.whenData((categories) {

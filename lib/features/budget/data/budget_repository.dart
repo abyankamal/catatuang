@@ -268,12 +268,12 @@ class BudgetRepository {
     }).toList();
 
     if (kIsWeb || (rawExpenses.length < 50 && rawBudgets.length < 20)) {
-      return _computeBudgetAggregation(rawBudgets, rawExpenses, catMap, year, month, activeBudgets);
+      return _computeBudgetAggregation(rawBudgets, rawExpenses, catMap, year, month);
     }
 
     // Eksekusi di isolate terpisah
     return await Isolate.run(() {
-      return _computeBudgetAggregation(rawBudgets, rawExpenses, catMap, year, month, activeBudgets);
+      return _computeBudgetAggregation(rawBudgets, rawExpenses, catMap, year, month);
     });
   }
 
@@ -283,7 +283,6 @@ class BudgetRepository {
     Map<String, Map<String, dynamic>> catMap,
     int year,
     int month,
-    List<Budget> originalBudgets,
   ) {
     // 1. Group expense per category
     final expenseMap = <String, double>{};
@@ -299,9 +298,8 @@ class BudgetRepository {
     double totalSpent = 0.0;
     final items = <CategoryBudgetUsage>[];
 
-    final budgetLookup = {for (var b in originalBudgets) b.syncId: b};
-
     for (final bData in rawBudgets) {
+      final id = bData['id'] as int;
       final syncId = bData['syncId'] as String;
       final catSyncId = bData['categorySyncId'] as String;
       final limit = bData['monthlyLimit'] as double;
@@ -326,16 +324,16 @@ class BudgetRepository {
       final catIcon = catInfo?['icon'] as String? ?? 'category';
       final catColor = catInfo?['color'] as int? ?? 0xFF5D5CFF;
 
-      final budgetObj = budgetLookup[syncId] ??
-          (Budget()
-            ..syncId = syncId
-            ..categorySyncId = catSyncId
-            ..monthlyLimit = limit
-            ..year = year
-            ..month = month
-            ..isActive = true
-            ..createdAt = DateTime.now()
-            ..updatedAt = DateTime.now());
+      final budgetObj = Budget()
+        ..id = id
+        ..syncId = syncId
+        ..categorySyncId = catSyncId
+        ..monthlyLimit = limit
+        ..year = bData['year'] as int? ?? year
+        ..month = bData['month'] as int? ?? month
+        ..isActive = bData['isActive'] as bool? ?? true
+        ..createdAt = DateTime.tryParse(bData['createdAt'] as String? ?? '') ?? DateTime.now()
+        ..updatedAt = DateTime.tryParse(bData['updatedAt'] as String? ?? '') ?? DateTime.now();
 
       items.add(
         CategoryBudgetUsage(

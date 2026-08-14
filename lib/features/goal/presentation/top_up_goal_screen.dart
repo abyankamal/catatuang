@@ -71,7 +71,12 @@ class _TopUpGoalScreenState extends ConsumerState<TopUpGoalScreen> {
   Widget build(BuildContext context) {
     // Note: To show regular wallets we need a provider, or we can just fetch it from WalletRepository
     final activeGoals = ref.watch(activeGoalsStreamProvider).valueOrNull ?? [];
-    final goal = activeGoals.firstWhere((g) => g.syncId == widget.goalId, orElse: () => Wallet());
+    final goal = activeGoals.cast<Wallet?>().firstWhere(
+          (g) => g?.syncId == widget.goalId,
+          orElse: () => null,
+        );
+
+    final goalName = goal?.name ?? 'Tujuan Tabungan';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -100,7 +105,7 @@ class _TopUpGoalScreenState extends ConsumerState<TopUpGoalScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tabung untuk ${goal.name.isNotEmpty ? goal.name : 'Tujuan'}',
+                      'Tabung untuk $goalName',
                       style: GoogleFonts.manrope(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
