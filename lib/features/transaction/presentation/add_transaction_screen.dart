@@ -4,11 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../category/data/category_repository.dart';
 import '../../dashboard/application/dashboard_providers.dart';
+import '../../goal/application/goal_providers.dart';
 import '../application/transaction_controller.dart';
 import '../domain/transaction.dart';
-import '../../goal/application/goal_providers.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   final Transaction? existingTransaction;
@@ -21,21 +22,28 @@ class AddTransactionScreen extends ConsumerStatefulWidget {
 
 class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   final _formKey = GlobalKey<FormState>();
-  
-  late String _selectedType;
+
+  late String _selectedType; // 'EXPENSE', 'INCOME', 'TRANSFER'
   final _amountController = TextEditingController();
+  final _adminFeeController = TextEditingController();
   final _descriptionController = TextEditingController();
   late DateTime _selectedDate;
 
   String? _selectedWalletSyncId;
+  String? _destinationWalletSyncId;
   String? _selectedCategorySyncId;
+
+  bool get isEditMode => widget.existingTransaction != null;
+  bool get isTransfer => _selectedType == 'TRANSFER';
 
   @override
   void initState() {
     super.initState();
     if (widget.existingTransaction != null) {
       final tx = widget.existingTransaction!;
-      _selectedType = tx.type;
+      _selectedType = tx.type == 'TRANSFER_OUT' || tx.type == 'TRANSFER_IN'
+          ? 'TRANSFER'
+          : tx.type;
       _amountController.text = tx.amount.toInt() == tx.amount
           ? tx.amount.toInt().toString()
           : tx.amount.toString();
@@ -52,10 +60,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   @override
   void dispose() {
     _amountController.dispose();
+    _adminFeeController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
-
 
   Future<void> _selectDate() async {
     final now = DateTime.now();
@@ -75,8 +83,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     );
     if (picked != null) {
       final isPickedToday = picked.year == now.year && picked.month == now.month && picked.day == now.day;
-      
-      // Jika tanggal hari ini, gunakan jam realtime. Jika tanggal sebelum hari ini, gunakan jam yang tersimpan atau jam 12:00
       final hour = isPickedToday ? now.hour : _selectedDate.hour;
       final minute = isPickedToday ? now.minute : _selectedDate.minute;
 
@@ -90,7 +96,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         );
       });
 
-      // Otomatis buka pemilih jam jika memilih tanggal sebelum hari ini
       if (!isPickedToday && mounted) {
         _selectTime();
       }
@@ -151,29 +156,60 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       return;
     }
 
-    final success = widget.existingTransaction != null
-        ? await ref.read(transactionControllerProvider.notifier).updateTransaction(
-              id: widget.existingTransaction!.id,
-              type: _selectedType,
-              amount: amount,
-              date: _selectedDate,
-              walletSyncId: _selectedWalletSyncId!,
-              categorySyncId: _selectedCategorySyncId,
-              description: _descriptionController.text.trim().isEmpty
-                  ? null
-                  : _descriptionController.text.trim(),
-            )
-        : await ref.read(transactionControllerProvider.notifier).addTransaction(
-              type: _selectedType,
-              amount: amount,
-              date: _selectedDate,
-              walletSyncId: _selectedWalletSyncId!,
-              categorySyncId: _selectedCategorySyncId,
-              description: _descriptionController.text.trim().isEmpty
-                  ? null
-                  : _descriptionController.text.trim(),
-            );
+    bool success;
 
+    if (isTransfer) {
+      if (_destinationWalletSyncId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Silakan pilih dompet tujuan transfer.')),
+        );
+        return;
+      }
+
+      if (_selectedWalletSyncId == _destinationWalletSyncId) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dompet sumber dan tujuan tidak boleh sama.')),
+        );
+        return;
+      }
+
+      final rawAdminFee = _adminFeeController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      final adminFee = double.tryParse(rawAdminFee) ?? 0.0;
+
+      success = await ref.read(transactionControllerProvider.notifier).transferBetweenWallets(
+            sourceWalletSyncId: _selectedWalletSyncId!,
+            destinationWalletSyncId: _destinationWalletSyncId!,
+            amount: amount,
+            date: _selectedDate,
+            adminFee: adminFee,
+            description: _descriptionController.text.trim().isEmpty
+                ? null
+                : _descriptionController.text.trim(),
+          );
+    } else if (isEditMode) {
+      success = await ref.read(transactionControllerProvider.notifier).updateTransaction(
+            id: widget.existingTransaction!.id,
+            type: _selectedType,
+            amount: amount,
+            date: _selectedDate,
+            walletSyncId: _selectedWalletSyncId!,
+            categorySyncId: _selectedCategorySyncId,
+            description: _descriptionController.text.trim().isEmpty
+                ? null
+                : _descriptionController.text.trim(),
+          );
+    } else {
+      success = await ref.read(transactionControllerProvider.notifier).addTransaction(
+            type: _selectedType,
+            amount: amount,
+            date: _selectedDate,
+            walletSyncId: _selectedWalletSyncId!,
+            categorySyncId: _selectedCategorySyncId,
+            description: _descriptionController.text.trim().isEmpty
+                ? null
+                : _descriptionController.text.trim(),
+          );
+    }
 
     if (mounted) {
       if (success) {
@@ -181,11 +217,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              _selectedType == 'INCOME'
-                  ? 'Pemasukan berhasil dicatat!'
-                  : 'Pengeluaran berhasil dicatat!',
+              isTransfer
+                  ? 'Transfer dana berhasil dicatat!'
+                  : (_selectedType == 'INCOME'
+                      ? 'Pemasukan berhasil dicatat!'
+                      : 'Pengeluaran berhasil dicatat!'),
             ),
-            backgroundColor: _selectedType == 'INCOME' ? AppColors.income : AppColors.expense,
+            backgroundColor: isTransfer
+                ? AppColors.primary
+                : (_selectedType == 'INCOME' ? AppColors.income : AppColors.expense),
           ),
         );
       } else {
@@ -195,6 +235,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         );
       }
     }
+  }
+
+  Color get _themeColor {
+    if (isTransfer) return AppColors.primary;
+    return _selectedType == 'INCOME' ? AppColors.income : AppColors.expense;
   }
 
   @override
@@ -210,7 +255,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: Text(
-          'Catat Transaksi',
+          isEditMode ? 'Edit Transaksi' : 'Catat Transaksi',
           style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             color: AppColors.secondary,
@@ -230,12 +275,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Type Selector Toggle (Pemasukan / Pengeluaran)
-                    _buildTypeToggle(),
-                    const SizedBox(height: 28),
+                    // Type Selector Toggle (Pengeluaran / Pemasukan / Transfer)
+                    if (!isEditMode) ...[
+                      _buildTypeToggle(),
+                      const SizedBox(height: 28),
+                    ],
 
                     // Amount Input
-                    _buildLabel('Nominal Transaksi (Rp)'),
+                    _buildLabel(isTransfer ? 'Nominal Transfer (Rp) *' : 'Nominal Transaksi (Rp) *'),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _amountController,
@@ -243,7 +290,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: _selectedType == 'INCOME' ? AppColors.income : AppColors.expense,
+                        color: _themeColor,
                       ),
                       decoration: InputDecoration(
                         hintText: '0',
@@ -252,7 +299,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         prefixStyle: GoogleFonts.jetBrainsMono(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: _selectedType == 'INCOME' ? AppColors.income : AppColors.expense,
+                          color: _themeColor,
                         ),
                         filled: true,
                         fillColor: AppColors.neutral,
@@ -263,7 +310,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide(
-                            color: _selectedType == 'INCOME' ? AppColors.income : AppColors.expense,
+                            color: _themeColor,
                             width: 2,
                           ),
                         ),
@@ -277,125 +324,139 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Wallet Picker
-                    _buildLabel('Pilih Dompet'),
-                    const SizedBox(height: 8),
-                    walletsAsync.when(
-                      data: (wallets) {
-                        final regularWallets = wallets.where((w) => !w.isGoal).toList();
-                        if (regularWallets.isEmpty) {
-                          return const Text('Belum ada dompet aktif.');
-                        }
+                    // Transfer vs Regular Form Fields
+                    if (isTransfer) ...[
+                      _buildTransferWalletsSection(walletsAsync),
+                      const SizedBox(height: 24),
+                      _buildAdminFeeInput(),
+                      const SizedBox(height: 24),
+                    ] else ...[
+                      // Regular Wallet Picker
+                      _buildLabel('Pilih Dompet *'),
+                      const SizedBox(height: 8),
+                      walletsAsync.when(
+                        data: (wallets) {
+                          final regularWallets = wallets.where((w) => !w.isGoal).toList();
+                          if (regularWallets.isEmpty) {
+                            return const Text('Belum ada dompet aktif.');
+                          }
+                          _selectedWalletSyncId ??= regularWallets.first.syncId;
 
-                        // Auto-select first wallet if none selected
-                        _selectedWalletSyncId ??= regularWallets.first.syncId;
-
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: AppColors.neutral,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _selectedWalletSyncId,
-                              isExpanded: true,
-                              icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                              items: regularWallets.map((w) {
-                                return DropdownMenuItem<String>(
-                                  value: w.syncId,
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.account_balance_wallet_rounded,
-                                          size: 20, color: AppColors.primary),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        w.name,
-                                        style: GoogleFonts.hankenGrotesk(
-                                          fontWeight: FontWeight.w600,
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: AppColors.neutral,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedWalletSyncId,
+                                isExpanded: true,
+                                icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                                items: regularWallets.map((w) {
+                                  return DropdownMenuItem<String>(
+                                    value: w.syncId,
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.account_balance_wallet_rounded,
+                                            size: 20, color: AppColors.primary),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          w.name,
+                                          style: GoogleFonts.hankenGrotesk(
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() => _selectedWalletSyncId = val);
-                                }
-                              },
-                            ),
-                          ),
-                        );
-                      },
-                      loading: () => const LinearProgressIndicator(),
-                      error: (e, _) => Text('Gagal memuat dompet: $e'),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Category Picker
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildLabel('Pilih Kategori'),
-                        TextButton.icon(
-                          onPressed: () => _showAddCategoryBottomSheet(context),
-                          icon: const Icon(Icons.add_circle_outline_rounded, size: 16, color: AppColors.primary),
-                          label: Text(
-                            '+ Tambah Kategori',
-                            style: GoogleFonts.hankenGrotesk(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    categoriesAsync.when(
-                      data: (categories) {
-                        final filteredCategories =
-                            categories.where((c) => c.type == _selectedType).toList();
-
-                        return Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            ...filteredCategories.map((cat) {
-                              final isSelected = _selectedCategorySyncId == cat.syncId;
-                              return ChoiceChip(
-                                label: Text(cat.name),
-                                selected: isSelected,
-                                selectedColor: AppColors.primary,
-                                labelStyle: GoogleFonts.hankenGrotesk(
-                                  color: isSelected ? Colors.white : AppColors.secondary,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                ),
-                                backgroundColor: AppColors.neutral,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(
-                                    color: isSelected ? AppColors.primary : Colors.transparent,
-                                  ),
-                                ),
-                                onSelected: (selected) {
-                                  setState(() {
-                                    _selectedCategorySyncId = selected ? cat.syncId : null;
-                                  });
+                                        const Spacer(),
+                                        Text(
+                                          'Rp ${CurrencyFormatter.format(w.balance)}',
+                                          style: GoogleFonts.jetBrainsMono(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(() => _selectedWalletSyncId = val);
+                                  }
                                 },
-                              );
-                            }),
-                          ],
-                        );
-                      },
-                      loading: () => const LinearProgressIndicator(),
-                      error: (e, _) => Text('Gagal memuat kategori: $e'),
-                    ),
-                    const SizedBox(height: 24),
+                              ),
+                            ),
+                          );
+                        },
+                        loading: () => const LinearProgressIndicator(),
+                        error: (e, _) => Text('Gagal memuat dompet: $e'),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Category Picker
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildLabel('Pilih Kategori'),
+                          TextButton.icon(
+                            onPressed: () => _showAddCategoryBottomSheet(context),
+                            icon: const Icon(Icons.add_circle_outline_rounded, size: 16, color: AppColors.primary),
+                            label: Text(
+                              '+ Tambah Kategori',
+                              style: GoogleFonts.hankenGrotesk(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      categoriesAsync.when(
+                        data: (categories) {
+                          final filteredCategories =
+                              categories.where((c) => c.type == _selectedType).toList();
+
+                          return Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ...filteredCategories.map((cat) {
+                                final isSelected = _selectedCategorySyncId == cat.syncId;
+                                return ChoiceChip(
+                                  label: Text(cat.name),
+                                  selected: isSelected,
+                                  selectedColor: AppColors.primary,
+                                  labelStyle: GoogleFonts.hankenGrotesk(
+                                    color: isSelected ? Colors.white : AppColors.secondary,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  ),
+                                  backgroundColor: AppColors.neutral,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: BorderSide(
+                                      color: isSelected ? AppColors.primary : Colors.transparent,
+                                    ),
+                                  ),
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      _selectedCategorySyncId = selected ? cat.syncId : null;
+                                    });
+                                  },
+                                );
+                              }),
+                            ],
+                          );
+                        },
+                        loading: () => const LinearProgressIndicator(),
+                        error: (e, _) => Text('Gagal memuat kategori: $e'),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
 
                     // Date & Time Picker
-                    _buildLabel('Tanggal & Waktu Transaksi'),
+                    _buildLabel(isTransfer ? 'Tanggal & Waktu Transfer *' : 'Tanggal & Waktu Transaksi *'),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -412,7 +473,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.calendar_today_rounded, color: AppColors.primary, size: 20),
+                                  Icon(Icons.calendar_today_rounded, color: _themeColor, size: 20),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
@@ -444,7 +505,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.access_time_rounded, color: AppColors.primary, size: 20),
+                                  Icon(Icons.access_time_rounded, color: _themeColor, size: 20),
                                   const SizedBox(width: 6),
                                   Text(
                                     '${_selectedDate.hour.toString().padLeft(2, '0')}:${_selectedDate.minute.toString().padLeft(2, '0')}',
@@ -469,9 +530,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     TextFormField(
                       controller: _descriptionController,
                       decoration: InputDecoration(
-                        hintText: 'Contoh: Makan siang Nasi Padang',
+                        hintText: isTransfer
+                            ? 'Contoh: Top up e-wallet / Bayar tagihan'
+                            : 'Contoh: Makan siang Nasi Padang',
                         hintStyle: GoogleFonts.hankenGrotesk(color: Colors.grey.shade400),
-                        prefixIcon: const Icon(Icons.edit_note_rounded, color: AppColors.primary),
+                        prefixIcon: Icon(Icons.edit_note_rounded, color: _themeColor),
                         filled: true,
                         fillColor: AppColors.neutral,
                         border: OutlineInputBorder(
@@ -497,7 +560,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             child: ElevatedButton(
               onPressed: isLoading ? null : _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: _themeColor,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -507,7 +570,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               child: isLoading
                   ? const CircularProgressIndicator(color: Colors.white)
                   : Text(
-                      'Simpan Transaksi',
+                      isTransfer ? 'Transfer Sekarang' : 'Simpan Transaksi',
                       style: GoogleFonts.manrope(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -517,6 +580,197 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTransferWalletsSection(AsyncValue<List<dynamic>> walletsAsync) {
+    return walletsAsync.when(
+      data: (wallets) {
+        final regularWallets = wallets.where((w) => !w.isGoal).toList();
+        if (regularWallets.length < 2) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.expenseLight,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Text(
+              'Anda memerlukan minimal 2 dompet aktif untuk melakukan transfer.',
+              style: TextStyle(color: AppColors.expense, fontWeight: FontWeight.w600),
+            ),
+          );
+        }
+
+        _selectedWalletSyncId ??= regularWallets.first.syncId;
+        _destinationWalletSyncId ??= regularWallets.length > 1
+            ? (regularWallets.first.syncId == _selectedWalletSyncId
+                ? regularWallets[1].syncId
+                : regularWallets.first.syncId)
+            : regularWallets.first.syncId;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Dompet Sumber
+            _buildLabel('Dompet Sumber (Asal Dana) *'),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.neutral,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedWalletSyncId,
+                  isExpanded: true,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                  items: regularWallets.map((w) {
+                    return DropdownMenuItem<String>(
+                      value: w.syncId,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.arrow_upward_rounded, size: 18, color: AppColors.expense),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              w.name,
+                              style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w600),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Rp ${CurrencyFormatter.format(w.balance)}',
+                            style: GoogleFonts.jetBrainsMono(fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _selectedWalletSyncId = val;
+                        // Pastikan tujuan berbeda jika sama
+                        if (_destinationWalletSyncId == val) {
+                          final other = regularWallets.firstWhere((w) => w.syncId != val);
+                          _destinationWalletSyncId = other.syncId;
+                        }
+                      });
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Dompet Tujuan
+            _buildLabel('Dompet Tujuan (Penerima Dana) *'),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.neutral,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _destinationWalletSyncId,
+                  isExpanded: true,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                  items: regularWallets.map((w) {
+                    final isSameAsSource = w.syncId == _selectedWalletSyncId;
+                    return DropdownMenuItem<String>(
+                      value: w.syncId,
+                      enabled: !isSameAsSource,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.arrow_downward_rounded,
+                            size: 18,
+                            color: isSameAsSource ? Colors.grey : AppColors.income,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              isSameAsSource ? '${w.name} (Dompet Sumber)' : w.name,
+                              style: GoogleFonts.hankenGrotesk(
+                                fontWeight: FontWeight.w600,
+                                color: isSameAsSource ? Colors.grey : AppColors.secondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Rp ${CurrencyFormatter.format(w.balance)}',
+                            style: GoogleFonts.jetBrainsMono(fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null && val != _selectedWalletSyncId) {
+                      setState(() => _destinationWalletSyncId = val);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const LinearProgressIndicator(),
+      error: (e, _) => Text('Gagal memuat dompet: $e'),
+    );
+  }
+
+  Widget _buildAdminFeeInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildLabel('Biaya Admin (Opsional)'),
+            Flexible(
+              child: Text(
+                'Dipotong dari dompet sumber',
+                style: GoogleFonts.hankenGrotesk(fontSize: 11, color: Colors.grey.shade500),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _adminFeeController,
+          keyboardType: TextInputType.number,
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppColors.secondary,
+          ),
+          decoration: InputDecoration(
+            hintText: '0',
+            hintStyle: GoogleFonts.jetBrainsMono(color: Colors.grey.shade400),
+            prefixText: 'Rp ',
+            prefixStyle: GoogleFonts.jetBrainsMono(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.secondary,
+            ),
+            filled: true,
+            fillColor: AppColors.neutral,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -548,6 +802,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     'Pengeluaran',
                     style: GoogleFonts.manrope(
                       fontWeight: FontWeight.bold,
+                      fontSize: 13,
                       color: _selectedType == 'EXPENSE' ? Colors.white : Colors.grey.shade600,
                     ),
                   ),
@@ -574,7 +829,35 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     'Pemasukan',
                     style: GoogleFonts.manrope(
                       fontWeight: FontWeight.bold,
+                      fontSize: 13,
                       color: _selectedType == 'INCOME' ? Colors.white : Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedType = 'TRANSFER';
+                  _selectedCategorySyncId = null;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _selectedType == 'TRANSFER' ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    'Transfer',
+                    style: GoogleFonts.manrope(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: _selectedType == 'TRANSFER' ? Colors.white : Colors.grey.shade600,
                     ),
                   ),
                 ),

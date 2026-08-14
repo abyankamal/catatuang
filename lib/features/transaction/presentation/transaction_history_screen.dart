@@ -586,7 +586,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
                                 child: Text('Pemasukan', style: GoogleFonts.outfit(fontSize: 13)),
                               ),
                               DropdownMenuItem(
-                                value: 'TRANSFER_OUT',
+                                value: 'TRANSFER',
                                 child: Text('Transfer', style: GoogleFonts.outfit(fontSize: 13)),
                               ),
                             ],

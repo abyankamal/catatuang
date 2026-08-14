@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/database/database_provider.dart';
 import '../../../core/exceptions/locked_period_exception.dart';
+import '../../category/domain/category.dart';
 import '../../settings/domain/app_settings.dart';
 import '../../wallet/domain/wallet.dart';
 import '../domain/transaction.dart';
@@ -86,6 +87,114 @@ class TransactionRepository {
     });
 
     return tx;
+  }
+
+  /// Transfer antar dompet reguler menggunakan 3-Transaction Transfer Pattern (AGENTS.md §4)
+  Future<void> transferBetweenWallets({
+    required String sourceWalletSyncId,
+    required String destinationWalletSyncId,
+    required double amount,
+    required DateTime date,
+    double adminFee = 0.0,
+    String? description,
+  }) async {
+    // 1. Period locking check (AGENTS.md §4)
+    final settings = await _isar.appSettings.where().findFirst();
+    if (settings?.lockedUntil != null && !date.isAfter(settings!.lockedUntil!)) {
+      throw LockedPeriodException();
+    }
+
+    if (sourceWalletSyncId == destinationWalletSyncId) {
+      throw Exception('Dompet sumber dan tujuan tidak boleh sama.');
+    }
+
+    if (amount <= 0) {
+      throw Exception('Nominal transfer harus lebih dari 0.');
+    }
+
+    final sourceWallet = await _isar.wallets.filter().syncIdEqualTo(sourceWalletSyncId).findFirst();
+    final destWallet = await _isar.wallets.filter().syncIdEqualTo(destinationWalletSyncId).findFirst();
+
+    if (sourceWallet == null || destWallet == null) {
+      throw Exception('Dompet sumber atau dompet tujuan tidak ditemukan.');
+    }
+
+    final now = DateTime.now();
+    final groupId = _uuid.v4();
+
+    // Cari kategori transfer fee jika ada admin fee
+    String? feeCatSyncId;
+    if (adminFee > 0) {
+      final feeCat = await _isar.categorys.filter().syncIdEqualTo('cat_transfer_fee').findFirst();
+      feeCatSyncId = feeCat?.syncId;
+    }
+
+    await _isar.writeTxn(() async {
+      // 1. Potong saldo dompet sumber
+      sourceWallet.balance -= amount;
+      if (adminFee > 0) {
+        sourceWallet.balance -= adminFee;
+      }
+      sourceWallet.updatedAt = now;
+      await _isar.wallets.put(sourceWallet);
+
+      // 2. Tambah saldo dompet tujuan
+      destWallet.balance += amount;
+      destWallet.updatedAt = now;
+      await _isar.wallets.put(destWallet);
+
+      // 3. Buat TRANSFER_OUT pada dompet sumber
+      final outDesc = description != null && description.isNotEmpty
+          ? 'Transfer ke ${destWallet.name} ($description)'
+          : 'Transfer ke ${destWallet.name}';
+
+      final outTx = Transaction()
+        ..syncId = _uuid.v4()
+        ..type = 'TRANSFER_OUT'
+        ..amount = amount
+        ..date = date
+        ..walletSyncId = sourceWalletSyncId
+        ..transactionGroupId = groupId
+        ..description = outDesc
+        ..createdAt = now
+        ..updatedAt = now;
+
+      // 4. Buat TRANSFER_IN pada dompet tujuan
+      final inDesc = description != null && description.isNotEmpty
+          ? 'Transfer dari ${sourceWallet.name} ($description)'
+          : 'Transfer dari ${sourceWallet.name}';
+
+      final inTx = Transaction()
+        ..syncId = _uuid.v4()
+        ..type = 'TRANSFER_IN'
+        ..amount = amount
+        ..date = date
+        ..walletSyncId = destinationWalletSyncId
+        ..transactionGroupId = groupId
+        ..description = inDesc
+        ..createdAt = now
+        ..updatedAt = now;
+
+      await _isar.transactions.put(outTx);
+      await _isar.transactions.put(inTx);
+
+      // 5. Catat EXPENSE untuk biaya admin jika ada (AGENTS.md §4)
+      if (adminFee > 0) {
+        final feeTx = Transaction()
+          ..syncId = _uuid.v4()
+          ..type = 'EXPENSE'
+          ..amount = adminFee
+          ..date = date
+          ..walletSyncId = sourceWalletSyncId
+          ..categorySyncId = feeCatSyncId
+          ..transactionGroupId = groupId
+          ..description = 'Biaya Transfer ke ${destWallet.name}'
+          ..createdAt = now
+          ..updatedAt = now;
+
+        await _isar.transactions.put(feeTx);
+      }
+    });
   }
 
   /// Menabung ke Tujuan Tabungan menggunakan 3-Transaction Transfer Pattern (AGENTS.md §4)
@@ -227,7 +336,11 @@ class TransactionRepository {
     }
 
     if (typeFilter != null && typeFilter.isNotEmpty && typeFilter != 'ALL') {
-      query = query.typeEqualTo(typeFilter);
+      if (typeFilter == 'TRANSFER' || typeFilter == 'TRANSFER_OUT') {
+        query = query.group((q) => q.typeEqualTo('TRANSFER_OUT').or().typeEqualTo('TRANSFER_IN'));
+      } else {
+        query = query.typeEqualTo(typeFilter);
+      }
     }
 
     return query.sortByDateDesc().watch(fireImmediately: true);
