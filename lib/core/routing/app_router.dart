@@ -41,11 +41,11 @@ class RouterNotifier extends ChangeNotifier {
 
   String? redirect(BuildContext context, GoRouterState state) {
     final settings = _ref.read(appSettingsStreamProvider).valueOrNull;
-    // Jika data settings belum siap (masih loading stream awal), biarkan router melanjutkan
-    if (settings == null) return null;
-
     final isGoingToOnboarding = state.matchedLocation == '/onboarding';
-    final hasCompleted = settings.hasCompletedOnboarding;
+
+    // Jika database kosong / settings belum ada / belum onboarding:
+    // (Misal setelah reset data atau fresh install)
+    final hasCompleted = settings?.hasCompletedOnboarding ?? false;
 
     // Jika belum selesai onboarding dan bukan sedang menuju /onboarding
     if (!hasCompleted && !isGoingToOnboarding) {

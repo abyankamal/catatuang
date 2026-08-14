@@ -332,7 +332,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               backgroundColor: AppColors.secondary,
             ),
           );
-          context.go('/dashboard');
+          context.go('/onboarding');
         }
       } catch (e) {
         if (mounted) {
