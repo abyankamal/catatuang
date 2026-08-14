@@ -196,6 +196,42 @@ class ReportRepository {
     );
   }
 
+  /// Mengambil seluruh riwayat transaksi untuk keperluan Ekspor CSV All-Time
+  Future<List<DetailedTransactionItem>> getAllTransactionsForExport() async {
+    final transactions = await _isar.transactions
+        .where()
+        .sortByDateDesc()
+        .findAll();
+
+    final categories = await _isar.categorys.where().findAll();
+    final wallets = await _isar.wallets.where().findAll();
+
+    final catNameMap = <String, String>{};
+    for (final c in categories) {
+      catNameMap[c.syncId] = c.name;
+    }
+
+    final walletNameMap = <String, String>{};
+    for (final w in wallets) {
+      walletNameMap[w.syncId] = w.name;
+    }
+
+    return transactions.map((t) {
+      final categoryName = catNameMap[t.categorySyncId ?? ''] ??
+          (t.type.contains('TRANSFER') ? 'Transfer Dompet' : 'Tanpa Kategori');
+      final walletName = walletNameMap[t.walletSyncId] ?? 'Dompet';
+
+      return DetailedTransactionItem(
+        date: t.date,
+        type: t.type,
+        amount: t.amount,
+        walletName: walletName,
+        categoryName: categoryName,
+        notes: t.description,
+      );
+    }).toList();
+  }
+
   static MonthlyReportData _aggregateData(
     List<Map<String, dynamic>> transactions,
     Map<String, Map<String, dynamic>> categoryMap,

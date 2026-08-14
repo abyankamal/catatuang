@@ -8,6 +8,7 @@ import 'package:printing/printing.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../application/report_providers.dart';
+import '../data/csv_report_service.dart';
 import '../data/pdf_report_service.dart';
 import '../data/report_repository.dart';
 
@@ -207,6 +208,182 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     }
   }
 
+  Future<void> _exportCsv({required bool allTime, required ReportFilterState filter}) async {
+    try {
+      final repo = ref.read(reportRepositoryProvider);
+      final List<DetailedTransactionItem> transactions;
+      final String fileName;
+
+      if (allTime) {
+        transactions = await repo.getAllTransactionsForExport();
+        fileName = 'CatatUang_Semua_Transaksi_${DateTime.now().year}.csv';
+      } else {
+        final detailed = await repo.getDetailedMonthlyReport(filter.year, filter.month);
+        transactions = detailed.transactions;
+        fileName = 'CatatUang_Transaksi_${_monthsIndonesian[filter.month - 1]}_${filter.year}.csv';
+      }
+
+      if (transactions.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tidak ada catatan transaksi untuk diekspor.'),
+              backgroundColor: AppColors.secondary,
+            ),
+          );
+        }
+        return;
+      }
+
+      final csvBytes = await CsvReportService.generateCsvBytes(transactions);
+
+      await Printing.sharePdf(
+        bytes: csvBytes,
+        filename: fileName,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengekspor CSV: $e'),
+            backgroundColor: AppColors.expense,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showExportOptionsSheet(BuildContext context, ReportFilterState filter) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Ekspor Laporan Keuangan',
+                  style: GoogleFonts.manrope(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.secondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Pilih format berkas yang Anda inginkan',
+                  style: GoogleFonts.hankenGrotesk(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Option 1: PDF Visual Report
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.picture_as_pdf_rounded, color: Colors.red, size: 24),
+                  ),
+                  title: Text(
+                    'Laporan PDF (Visual & Cetak)',
+                    style: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                  ),
+                  subtitle: Text(
+                    'Periode ${_monthsIndonesian[filter.month - 1]} ${filter.year} lengkap dengan tabel dan rekap',
+                    style: GoogleFonts.hankenGrotesk(fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _exportPdf(filter);
+                  },
+                ),
+                const Divider(height: 24),
+
+                // Option 2: CSV Month
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.table_chart_rounded, color: Colors.green, size: 24),
+                  ),
+                  title: Text(
+                    'Spreadsheet CSV (Bulan Ini)',
+                    style: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                  ),
+                  subtitle: Text(
+                    'Data transaksi bulan ${_monthsIndonesian[filter.month - 1]} ${filter.year} untuk Excel / Sheets',
+                    style: GoogleFonts.hankenGrotesk(fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _exportCsv(allTime: false, filter: filter);
+                  },
+                ),
+                const SizedBox(height: 8),
+
+                // Option 3: CSV All Time
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.file_download_outlined, color: Colors.blue, size: 24),
+                  ),
+                  title: Text(
+                    'Spreadsheet CSV (Semua Transaksi)',
+                    style: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                  ),
+                  subtitle: Text(
+                    'Seluruh riwayat transaksi (Full Backup) untuk pengolahan spreadsheet',
+                    style: GoogleFonts.hankenGrotesk(fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _exportCsv(allTime: true, filter: filter);
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filter = ref.watch(reportFilterProvider);
@@ -227,9 +404,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.primary),
-            tooltip: 'Export Laporan PDF',
-            onPressed: () => _exportPdf(filter),
+            icon: const Icon(Icons.share_rounded, color: AppColors.primary),
+            tooltip: 'Ekspor Laporan (PDF / CSV)',
+            onPressed: () => _showExportOptionsSheet(context, filter),
           ),
         ],
         centerTitle: false,

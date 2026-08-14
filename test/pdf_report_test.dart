@@ -133,8 +133,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('Laporan & Grafik'), findsOneWidget);
-      expect(find.byIcon(Icons.picture_as_pdf_rounded), findsNWidgets(2)); // in AppBar and bottom button
-      expect(find.text('Export Laporan PDF (Agustus 2026)'), findsOneWidget);
+      expect(find.byIcon(Icons.share_rounded), findsOneWidget); // Ekspor action button di AppBar
     });
   });
 }
