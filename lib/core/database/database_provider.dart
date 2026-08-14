@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../features/budget/domain/budget.dart';
 import '../../features/category/domain/category.dart';
 import '../../features/contact/domain/contact.dart';
 import '../../features/debt/domain/debt.dart';
@@ -27,6 +28,7 @@ Future<Isar> openIsar() async {
         DebtSchema,
         TransactionSchema,
         AppSettingsSchema,
+        BudgetSchema,
       ],
       directory: '',
     );
@@ -41,6 +43,7 @@ Future<Isar> openIsar() async {
       DebtSchema,
       TransactionSchema,
       AppSettingsSchema,
+      BudgetSchema,
     ],
     directory: dir.path,
   );

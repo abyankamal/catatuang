@@ -777,6 +777,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             leading: Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
+                                color: Colors.purple.withAlpha(20),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.pie_chart_rounded, color: Colors.purple),
+                            ),
+                            title: Text(
+                              'Anggaran Bulanan',
+                              style: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                            ),
+                            subtitle: Text('Batas pengeluaran per kategori', style: GoogleFonts.hankenGrotesk()),
+                            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.secondary),
+                            onTap: () => context.push('/budgets'),
+                          ),
+                          const SizedBox(height: 16),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
                                 color: Colors.teal.withAlpha(20),
                                 shape: BoxShape.circle,
                               ),

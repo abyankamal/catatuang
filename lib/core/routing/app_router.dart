@@ -18,6 +18,7 @@ import 'not_found_screen.dart';
 import '../../features/wallet/domain/wallet.dart';
 import '../../features/wallet/presentation/wallet_list_screen.dart';
 import '../../features/wallet/presentation/wallet_form_screen.dart';
+import '../../features/budget/presentation/budget_list_screen.dart';
 import '../../features/category/domain/category.dart';
 import '../../features/category/presentation/category_list_screen.dart';
 import '../../features/category/presentation/category_form_screen.dart';
@@ -226,6 +227,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         final contact = state.extra as Contact;
         return ContactFormScreen(existingContact: contact);
       },
+    ),
+    // Fitur Anggaran
+    GoRoute(
+      path: '/budgets',
+      builder: (context, state) => const BudgetListScreen(),
     ),
     // Fitur Onboarding
     GoRoute(

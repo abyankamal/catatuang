@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../budget/presentation/widgets/dashboard_budget_card.dart';
 import '../../category/domain/category.dart';
 import '../../debt/application/debt_providers.dart';
 import '../../wallet/domain/wallet.dart';
@@ -118,7 +119,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
                     // Debt & Receivable Quick Overview Banner
                     _buildDebtQuickBanner(debtSummaryAsync),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
+
+                    // Monthly Budget Progress Quick Overview
+                    const DashboardBudgetCard(),
 
                     // Recent Transactions Section (Aktivitas Terbaru)
                     _buildRecentTransactionsSection(
