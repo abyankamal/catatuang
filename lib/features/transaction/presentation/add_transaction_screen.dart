@@ -17,7 +17,8 @@ class AddTransactionScreen extends ConsumerStatefulWidget {
   const AddTransactionScreen({super.key, this.existingTransaction});
 
   @override
-  ConsumerState<AddTransactionScreen> createState() => _AddTransactionScreenState();
+  ConsumerState<AddTransactionScreen> createState() =>
+      _AddTransactionScreenState();
 }
 
 class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
@@ -72,7 +73,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
     final initialDate = _selectedDate.isAfter(today)
         ? today
-        : (_selectedDate.isBefore(firstDayOfMonth) ? firstDayOfMonth : _selectedDate);
+        : (_selectedDate.isBefore(firstDayOfMonth)
+              ? firstDayOfMonth
+              : _selectedDate);
 
     final picked = await showDatePicker(
       context: context,
@@ -82,7 +85,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       helpText: 'Pilih Tanggal Transaksi (Bulan Ini)',
     );
     if (picked != null) {
-      final isPickedToday = picked.year == now.year && picked.month == now.month && picked.day == now.day;
+      final isPickedToday =
+          picked.year == now.year &&
+          picked.month == now.month &&
+          picked.day == now.day;
       final hour = isPickedToday ? now.hour : _selectedDate.hour;
       final minute = isPickedToday ? now.minute : _selectedDate.minute;
 
@@ -129,10 +135,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final firstDayOfMonth = DateTime(now.year, now.month, 1);
     final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-    if (_selectedDate.isAfter(endOfToday) || _selectedDate.isBefore(firstDayOfMonth)) {
+    if (_selectedDate.isAfter(endOfToday) ||
+        _selectedDate.isBefore(firstDayOfMonth)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Tanggal transaksi hanya diperbolehkan untuk bulan ini dan maksimal hari ini.'),
+          content: Text(
+            'Tanggal transaksi hanya diperbolehkan untuk bulan ini dan maksimal hari ini.',
+          ),
           backgroundColor: AppColors.expense,
         ),
       );
@@ -161,22 +170,31 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (isTransfer) {
       if (_destinationWalletSyncId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Silakan pilih dompet tujuan transfer.')),
+          const SnackBar(
+            content: Text('Silakan pilih dompet tujuan transfer.'),
+          ),
         );
         return;
       }
 
       if (_selectedWalletSyncId == _destinationWalletSyncId) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Dompet sumber dan tujuan tidak boleh sama.')),
+          const SnackBar(
+            content: Text('Dompet sumber dan tujuan tidak boleh sama.'),
+          ),
         );
         return;
       }
 
-      final rawAdminFee = _adminFeeController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      final rawAdminFee = _adminFeeController.text.replaceAll(
+        RegExp(r'[^0-9]'),
+        '',
+      );
       final adminFee = double.tryParse(rawAdminFee) ?? 0.0;
 
-      success = await ref.read(transactionControllerProvider.notifier).transferBetweenWallets(
+      success = await ref
+          .read(transactionControllerProvider.notifier)
+          .transferBetweenWallets(
             sourceWalletSyncId: _selectedWalletSyncId!,
             destinationWalletSyncId: _destinationWalletSyncId!,
             amount: amount,
@@ -187,7 +205,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 : _descriptionController.text.trim(),
           );
     } else if (isEditMode) {
-      success = await ref.read(transactionControllerProvider.notifier).updateTransaction(
+      success = await ref
+          .read(transactionControllerProvider.notifier)
+          .updateTransaction(
             id: widget.existingTransaction!.id,
             type: _selectedType,
             amount: amount,
@@ -199,7 +219,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 : _descriptionController.text.trim(),
           );
     } else {
-      success = await ref.read(transactionControllerProvider.notifier).addTransaction(
+      success = await ref
+          .read(transactionControllerProvider.notifier)
+          .addTransaction(
             type: _selectedType,
             amount: amount,
             date: _selectedDate,
@@ -220,18 +242,24 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               isTransfer
                   ? 'Transfer dana berhasil dicatat!'
                   : (_selectedType == 'INCOME'
-                      ? 'Pemasukan berhasil dicatat!'
-                      : 'Pengeluaran berhasil dicatat!'),
+                        ? 'Pemasukan berhasil dicatat!'
+                        : 'Pengeluaran berhasil dicatat!'),
             ),
             backgroundColor: isTransfer
                 ? AppColors.primary
-                : (_selectedType == 'INCOME' ? AppColors.income : AppColors.expense),
+                : (_selectedType == 'INCOME'
+                      ? AppColors.income
+                      : AppColors.expense),
           ),
         );
       } else {
         final error = ref.read(transactionControllerProvider).error;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menyimpan transaksi: ${error ?? "Terjadi kesalahan"}')),
+          SnackBar(
+            content: Text(
+              'Gagal menyimpan transaksi: ${error ?? "Terjadi kesalahan"}',
+            ),
+          ),
         );
       }
     }
@@ -282,7 +310,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     ],
 
                     // Amount Input
-                    _buildLabel(isTransfer ? 'Nominal Transfer (Rp) *' : 'Nominal Transaksi (Rp) *'),
+                    _buildLabel(
+                      isTransfer
+                          ? 'Nominal Transfer (Rp) *'
+                          : 'Nominal Transaksi (Rp) *',
+                    ),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _amountController,
@@ -294,7 +326,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       ),
                       decoration: InputDecoration(
                         hintText: '0',
-                        hintStyle: GoogleFonts.jetBrainsMono(color: Colors.grey.shade300),
+                        hintStyle: GoogleFonts.jetBrainsMono(
+                          color: Colors.grey.shade300,
+                        ),
                         prefixText: 'Rp ',
                         prefixStyle: GoogleFonts.jetBrainsMono(
                           fontSize: 24,
@@ -309,16 +343,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(
-                            color: _themeColor,
-                            width: 2,
-                          ),
+                          borderSide: BorderSide(color: _themeColor, width: 2),
                         ),
                       ),
                       validator: (val) {
-                        if (val == null || val.isEmpty) return 'Nominal wajib diisi';
-                        final num = double.tryParse(val.replaceAll(RegExp(r'[^0-9]'), ''));
-                        if (num == null || num <= 0) return 'Nominal tidak valid';
+                        if (val == null || val.isEmpty) {
+                          return 'Nominal wajib diisi';
+                        }
+                        final num = double.tryParse(
+                          val.replaceAll(RegExp(r'[^0-9]'), ''),
+                        );
+                        if (num == null || num <= 0) {
+                          return 'Nominal tidak valid';
+                        }
                         return null;
                       },
                     ),
@@ -336,7 +373,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       const SizedBox(height: 8),
                       walletsAsync.when(
                         data: (wallets) {
-                          final regularWallets = wallets.where((w) => !w.isGoal).toList();
+                          final regularWallets = wallets
+                              .where((w) => !w.isGoal)
+                              .toList();
                           if (regularWallets.isEmpty) {
                             return const Text('Belum ada dompet aktif.');
                           }
@@ -352,14 +391,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                               child: DropdownButton<String>(
                                 value: _selectedWalletSyncId,
                                 isExpanded: true,
-                                icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                                icon: const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                ),
                                 items: regularWallets.map((w) {
                                   return DropdownMenuItem<String>(
                                     value: w.syncId,
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.account_balance_wallet_rounded,
-                                            size: 20, color: AppColors.primary),
+                                        const Icon(
+                                          Icons.account_balance_wallet_rounded,
+                                          size: 20,
+                                          color: AppColors.primary,
+                                        ),
                                         const SizedBox(width: 12),
                                         Text(
                                           w.name,
@@ -369,7 +413,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                         ),
                                         const Spacer(),
                                         Text(
-                                          'Rp ${CurrencyFormatter.format(w.balance)}',
+                                          CurrencyFormatter.format(w.balance),
                                           style: GoogleFonts.jetBrainsMono(
                                             fontSize: 12,
                                             color: Colors.grey.shade600,
@@ -399,8 +443,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         children: [
                           _buildLabel('Pilih Kategori'),
                           TextButton.icon(
-                            onPressed: () => _showAddCategoryBottomSheet(context),
-                            icon: const Icon(Icons.add_circle_outline_rounded, size: 16, color: AppColors.primary),
+                            onPressed: () =>
+                                _showAddCategoryBottomSheet(context),
+                            icon: const Icon(
+                              Icons.add_circle_outline_rounded,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
                             label: Text(
                               '+ Tambah Kategori',
                               style: GoogleFonts.hankenGrotesk(
@@ -415,33 +464,43 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       const SizedBox(height: 8),
                       categoriesAsync.when(
                         data: (categories) {
-                          final filteredCategories =
-                              categories.where((c) => c.type == _selectedType).toList();
+                          final filteredCategories = categories
+                              .where((c) => c.type == _selectedType)
+                              .toList();
 
                           return Wrap(
                             spacing: 8,
                             runSpacing: 8,
                             children: [
                               ...filteredCategories.map((cat) {
-                                final isSelected = _selectedCategorySyncId == cat.syncId;
+                                final isSelected =
+                                    _selectedCategorySyncId == cat.syncId;
                                 return ChoiceChip(
                                   label: Text(cat.name),
                                   selected: isSelected,
                                   selectedColor: AppColors.primary,
                                   labelStyle: GoogleFonts.hankenGrotesk(
-                                    color: isSelected ? Colors.white : AppColors.secondary,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : AppColors.secondary,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
                                   ),
                                   backgroundColor: AppColors.neutral,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     side: BorderSide(
-                                      color: isSelected ? AppColors.primary : Colors.transparent,
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : Colors.transparent,
                                     ),
                                   ),
                                   onSelected: (selected) {
                                     setState(() {
-                                      _selectedCategorySyncId = selected ? cat.syncId : null;
+                                      _selectedCategorySyncId = selected
+                                          ? cat.syncId
+                                          : null;
                                     });
                                   },
                                 );
@@ -456,7 +515,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     ],
 
                     // Date & Time Picker
-                    _buildLabel(isTransfer ? 'Tanggal & Waktu Transfer *' : 'Tanggal & Waktu Transaksi *'),
+                    _buildLabel(
+                      isTransfer
+                          ? 'Tanggal & Waktu Transfer *'
+                          : 'Tanggal & Waktu Transaksi *',
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -466,14 +529,21 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             onTap: _selectDate,
                             borderRadius: BorderRadius.circular(16),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 16,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.neutral,
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.calendar_today_rounded, color: _themeColor, size: 20),
+                                  Icon(
+                                    Icons.calendar_today_rounded,
+                                    color: _themeColor,
+                                    size: 20,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
@@ -497,7 +567,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             onTap: _selectTime,
                             borderRadius: BorderRadius.circular(16),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 16,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.neutral,
                                 borderRadius: BorderRadius.circular(16),
@@ -505,7 +578,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.access_time_rounded, color: _themeColor, size: 20),
+                                  Icon(
+                                    Icons.access_time_rounded,
+                                    color: _themeColor,
+                                    size: 20,
+                                  ),
                                   const SizedBox(width: 6),
                                   Text(
                                     '${_selectedDate.hour.toString().padLeft(2, '0')}:${_selectedDate.minute.toString().padLeft(2, '0')}',
@@ -533,8 +610,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         hintText: isTransfer
                             ? 'Contoh: Top up e-wallet / Bayar tagihan'
                             : 'Contoh: Makan siang Nasi Padang',
-                        hintStyle: GoogleFonts.hankenGrotesk(color: Colors.grey.shade400),
-                        prefixIcon: Icon(Icons.edit_note_rounded, color: _themeColor),
+                        hintStyle: GoogleFonts.hankenGrotesk(
+                          color: Colors.grey.shade400,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.edit_note_rounded,
+                          color: _themeColor,
+                        ),
                         filled: true,
                         fillColor: AppColors.neutral,
                         border: OutlineInputBorder(
@@ -596,7 +678,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             ),
             child: const Text(
               'Anda memerlukan minimal 2 dompet aktif untuk melakukan transfer.',
-              style: TextStyle(color: AppColors.expense, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: AppColors.expense,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           );
         }
@@ -604,8 +689,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         _selectedWalletSyncId ??= regularWallets.first.syncId;
         _destinationWalletSyncId ??= regularWallets.length > 1
             ? (regularWallets.first.syncId == _selectedWalletSyncId
-                ? regularWallets[1].syncId
-                : regularWallets.first.syncId)
+                  ? regularWallets[1].syncId
+                  : regularWallets.first.syncId)
             : regularWallets.first.syncId;
 
         return Column(
@@ -630,16 +715,25 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       value: w.syncId,
                       child: Row(
                         children: [
-                          const Icon(Icons.arrow_upward_rounded, size: 18, color: AppColors.expense),
+                          const Icon(
+                            Icons.arrow_upward_rounded,
+                            size: 18,
+                            color: AppColors.expense,
+                          ),
                           const SizedBox(width: 10),
                           Text(
                             w.name,
-                            style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w600),
+                            style: GoogleFonts.hankenGrotesk(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           const Spacer(),
                           Text(
-                            'Rp ${CurrencyFormatter.format(w.balance)}',
-                            style: GoogleFonts.jetBrainsMono(fontSize: 12, color: Colors.grey.shade600),
+                            CurrencyFormatter.format(w.balance),
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
                         ],
                       ),
@@ -651,7 +745,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         _selectedWalletSyncId = val;
                         // Pastikan tujuan berbeda jika sama
                         if (_destinationWalletSyncId == val) {
-                          final other = regularWallets.firstWhere((w) => w.syncId != val);
+                          final other = regularWallets.firstWhere(
+                            (w) => w.syncId != val,
+                          );
                           _destinationWalletSyncId = other.syncId;
                         }
                       });
@@ -686,20 +782,29 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           Icon(
                             Icons.arrow_downward_rounded,
                             size: 18,
-                            color: isSameAsSource ? Colors.grey : AppColors.income,
+                            color: isSameAsSource
+                                ? Colors.grey
+                                : AppColors.income,
                           ),
                           const SizedBox(width: 10),
                           Text(
-                            isSameAsSource ? '${w.name} (Dompet Sumber)' : w.name,
+                            isSameAsSource
+                                ? '${w.name} (Dompet Sumber)'
+                                : w.name,
                             style: GoogleFonts.hankenGrotesk(
                               fontWeight: FontWeight.w600,
-                              color: isSameAsSource ? Colors.grey : AppColors.secondary,
+                              color: isSameAsSource
+                                  ? Colors.grey
+                                  : AppColors.secondary,
                             ),
                           ),
                           const Spacer(),
                           Text(
-                            'Rp ${CurrencyFormatter.format(w.balance)}',
-                            style: GoogleFonts.jetBrainsMono(fontSize: 12, color: Colors.grey.shade600),
+                            CurrencyFormatter.format(w.balance),
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
                         ],
                       ),
@@ -732,7 +837,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             Flexible(
               child: Text(
                 'Dipotong dari dompet sumber',
-                style: GoogleFonts.hankenGrotesk(fontSize: 11, color: Colors.grey.shade500),
+                style: GoogleFonts.hankenGrotesk(
+                  fontSize: 11,
+                  color: Colors.grey.shade500,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -788,7 +896,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _selectedType == 'EXPENSE' ? AppColors.expense : Colors.transparent,
+                  color: _selectedType == 'EXPENSE'
+                      ? AppColors.expense
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -797,7 +907,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     style: GoogleFonts.manrope(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
-                      color: _selectedType == 'EXPENSE' ? Colors.white : Colors.grey.shade600,
+                      color: _selectedType == 'EXPENSE'
+                          ? Colors.white
+                          : Colors.grey.shade600,
                     ),
                   ),
                 ),
@@ -815,7 +927,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _selectedType == 'INCOME' ? AppColors.income : Colors.transparent,
+                  color: _selectedType == 'INCOME'
+                      ? AppColors.income
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -824,7 +938,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     style: GoogleFonts.manrope(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
-                      color: _selectedType == 'INCOME' ? Colors.white : Colors.grey.shade600,
+                      color: _selectedType == 'INCOME'
+                          ? Colors.white
+                          : Colors.grey.shade600,
                     ),
                   ),
                 ),
@@ -842,7 +958,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _selectedType == 'TRANSFER' ? AppColors.primary : Colors.transparent,
+                  color: _selectedType == 'TRANSFER'
+                      ? AppColors.primary
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -851,7 +969,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     style: GoogleFonts.manrope(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
-                      color: _selectedType == 'TRANSFER' ? Colors.white : Colors.grey.shade600,
+                      color: _selectedType == 'TRANSFER'
+                          ? Colors.white
+                          : Colors.grey.shade600,
                     ),
                   ),
                 ),
@@ -921,7 +1041,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   hintText: isIncome
                       ? 'Contoh: Cashback, Dividen, Sampingan'
                       : 'Contoh: Olahraga, Hiburan, Kopi',
-                  hintStyle: GoogleFonts.hankenGrotesk(color: Colors.grey.shade400),
+                  hintStyle: GoogleFonts.hankenGrotesk(
+                    color: Colors.grey.shade400,
+                  ),
                   filled: true,
                   fillColor: AppColors.neutral,
                   border: OutlineInputBorder(
@@ -943,7 +1065,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isIncome ? AppColors.income : AppColors.primary,
+                    backgroundColor: isIncome
+                        ? AppColors.income
+                        : AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -953,7 +1077,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     if (name.isEmpty) return;
 
                     final color = isIncome ? 0xFF10B981 : 0xFFEF4444;
-                    final category = await ref.read(categoryRepositoryProvider).createCategory(
+                    final category = await ref
+                        .read(categoryRepositoryProvider)
+                        .createCategory(
                           name: name,
                           type: _selectedType,
                           colorValue: color,
