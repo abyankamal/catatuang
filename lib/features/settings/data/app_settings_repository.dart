@@ -57,6 +57,31 @@ class AppSettingsRepository {
     });
   }
 
+  /// Memperbarui tanggal batas periode terkunci (Tutup Buku)
+  Future<void> updateLockedUntil(DateTime? lockedUntil) async {
+    final settings = await getOrInitSettings();
+    
+    // Normalisasi ke akhir hari (23:59:59.999) jika tanggal diberikan
+    final normalized = lockedUntil != null
+        ? DateTime(
+            lockedUntil.year,
+            lockedUntil.month,
+            lockedUntil.day,
+            23,
+            59,
+            59,
+            999,
+          )
+        : null;
+
+    settings.lockedUntil = normalized;
+    settings.updatedAt = DateTime.now();
+
+    await _isar.writeTxn(() async {
+      await _isar.appSettings.put(settings);
+    });
+  }
+
   /// Reset/hapus seluruh isi database Isar secara instan
   Future<void> clearAllData() async {
     await _isar.writeTxn(() async {

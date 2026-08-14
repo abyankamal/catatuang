@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../category/data/category_repository.dart';
 import '../../category/domain/category.dart';
 import '../../report/data/report_repository.dart';
-import '../../settings/data/app_settings_repository.dart';
-import '../../settings/domain/app_settings.dart';
+import '../../settings/application/settings_providers.dart';
+export '../../settings/application/settings_providers.dart';
 import '../../transaction/data/transaction_repository.dart';
 import '../../transaction/domain/transaction.dart';
 import '../../wallet/data/wallet_repository.dart';
@@ -23,11 +23,6 @@ final activeCategoriesStreamProvider = StreamProvider<List<Category>>((ref) {
 final recentTransactionsStreamProvider = StreamProvider<List<Transaction>>((ref) {
   final repo = ref.watch(transactionRepositoryProvider);
   return repo.watchRecentTransactions(limit: 10);
-});
-
-final appSettingsStreamProvider = StreamProvider<AppSettings?>((ref) {
-  final repo = ref.watch(appSettingsRepositoryProvider);
-  return repo.watchSettings();
 });
 
 class DashboardSummaryState {
