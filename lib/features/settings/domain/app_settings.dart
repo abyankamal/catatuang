@@ -18,6 +18,8 @@ class AppSettings {
   
   bool isPrivacyScreenEnabled = true;  // Flag status privasi blur saat app switcher
 
+  bool isDebtReminderEnabled = true;   // Flag status pengingat notifikasi utang & piutang
+
   late DateTime createdAt;
   late DateTime updatedAt;
 }

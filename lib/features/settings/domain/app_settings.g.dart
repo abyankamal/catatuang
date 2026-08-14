@@ -32,28 +32,33 @@ const AppSettingsSchema = CollectionSchema(
       name: r'hasCompletedOnboarding',
       type: IsarType.bool,
     ),
-    r'isPrivacyScreenEnabled': PropertySchema(
+    r'isDebtReminderEnabled': PropertySchema(
       id: 3,
+      name: r'isDebtReminderEnabled',
+      type: IsarType.bool,
+    ),
+    r'isPrivacyScreenEnabled': PropertySchema(
+      id: 4,
       name: r'isPrivacyScreenEnabled',
       type: IsarType.bool,
     ),
     r'lockedUntil': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'lockedUntil',
       type: IsarType.dateTime,
     ),
     r'syncId': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'syncId',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'userName': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'userName',
       type: IsarType.string,
     )
@@ -117,11 +122,12 @@ void _appSettingsSerialize(
   writer.writeString(offsets[0], object.avatarIcon);
   writer.writeDateTime(offsets[1], object.createdAt);
   writer.writeBool(offsets[2], object.hasCompletedOnboarding);
-  writer.writeBool(offsets[3], object.isPrivacyScreenEnabled);
-  writer.writeDateTime(offsets[4], object.lockedUntil);
-  writer.writeString(offsets[5], object.syncId);
-  writer.writeDateTime(offsets[6], object.updatedAt);
-  writer.writeString(offsets[7], object.userName);
+  writer.writeBool(offsets[3], object.isDebtReminderEnabled);
+  writer.writeBool(offsets[4], object.isPrivacyScreenEnabled);
+  writer.writeDateTime(offsets[5], object.lockedUntil);
+  writer.writeString(offsets[6], object.syncId);
+  writer.writeDateTime(offsets[7], object.updatedAt);
+  writer.writeString(offsets[8], object.userName);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -135,11 +141,12 @@ AppSettings _appSettingsDeserialize(
   object.createdAt = reader.readDateTime(offsets[1]);
   object.hasCompletedOnboarding = reader.readBool(offsets[2]);
   object.id = id;
-  object.isPrivacyScreenEnabled = reader.readBool(offsets[3]);
-  object.lockedUntil = reader.readDateTimeOrNull(offsets[4]);
-  object.syncId = reader.readString(offsets[5]);
-  object.updatedAt = reader.readDateTime(offsets[6]);
-  object.userName = reader.readStringOrNull(offsets[7]);
+  object.isDebtReminderEnabled = reader.readBool(offsets[3]);
+  object.isPrivacyScreenEnabled = reader.readBool(offsets[4]);
+  object.lockedUntil = reader.readDateTimeOrNull(offsets[5]);
+  object.syncId = reader.readString(offsets[6]);
+  object.updatedAt = reader.readDateTime(offsets[7]);
+  object.userName = reader.readStringOrNull(offsets[8]);
   return object;
 }
 
@@ -159,12 +166,14 @@ P _appSettingsDeserializeProp<P>(
     case 3:
       return (reader.readBool(offset)) as P;
     case 4:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 5:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 6:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 7:
+      return (reader.readDateTime(offset)) as P;
+    case 8:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -633,6 +642,16 @@ extension AppSettingsQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      isDebtReminderEnabledEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isDebtReminderEnabled',
+        value: value,
       ));
     });
   }
@@ -1112,6 +1131,20 @@ extension AppSettingsQuerySortBy
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByIsDebtReminderEnabled() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDebtReminderEnabled', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByIsDebtReminderEnabledDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDebtReminderEnabled', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       sortByIsPrivacyScreenEnabled() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isPrivacyScreenEnabled', Sort.asc);
@@ -1227,6 +1260,20 @@ extension AppSettingsQuerySortThenBy
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByIsDebtReminderEnabled() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDebtReminderEnabled', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByIsDebtReminderEnabledDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDebtReminderEnabled', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       thenByIsPrivacyScreenEnabled() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isPrivacyScreenEnabled', Sort.asc);
@@ -1312,6 +1359,13 @@ extension AppSettingsQueryWhereDistinct
   }
 
   QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByIsDebtReminderEnabled() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isDebtReminderEnabled');
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
       distinctByIsPrivacyScreenEnabled() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isPrivacyScreenEnabled');
@@ -1369,6 +1423,13 @@ extension AppSettingsQueryProperty
       hasCompletedOnboardingProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'hasCompletedOnboarding');
+    });
+  }
+
+  QueryBuilder<AppSettings, bool, QQueryOperations>
+      isDebtReminderEnabledProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isDebtReminderEnabled');
     });
   }
 

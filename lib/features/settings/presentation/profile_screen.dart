@@ -834,6 +834,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ref.read(settingsControllerProvider.notifier).setPrivacyScreenEnabled(val);
                             },
                           ),
+                          const SizedBox(height: 16),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            activeThumbColor: AppColors.primary,
+                            secondary: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.deepOrange.withAlpha(20),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.notifications_active_rounded, color: Colors.deepOrange),
+                            ),
+                            title: Text(
+                              'Pengingat Utang & Piutang',
+                              style: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                            ),
+                            subtitle: Text(
+                              'Peringatan otomatis jatuh tempo tagihan & pinjaman',
+                              style: GoogleFonts.hankenGrotesk(),
+                            ),
+                            value: settings?.isDebtReminderEnabled ?? true,
+                            onChanged: (val) {
+                              ref.read(settingsControllerProvider.notifier).setDebtReminderEnabled(val);
+                            },
+                          ),
                         ],
                       ),
                     ),

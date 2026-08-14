@@ -109,6 +109,17 @@ class AppSettingsRepository {
     });
   }
 
+  /// Memperbarui preferensi pengingat notifikasi utang & piutang
+  Future<void> updateDebtReminder(bool isEnabled) async {
+    final settings = await getOrInitSettings();
+    settings.isDebtReminderEnabled = isEnabled;
+    settings.updatedAt = DateTime.now();
+
+    await _isar.writeTxn(() async {
+      await _isar.appSettings.put(settings);
+    });
+  }
+
   /// Reset/hapus seluruh isi database Isar secara instan
   Future<void> clearAllData() async {
     await _isar.writeTxn(() async {

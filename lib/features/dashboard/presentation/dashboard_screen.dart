@@ -7,6 +7,8 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../budget/presentation/widgets/dashboard_budget_card.dart';
 import '../../category/domain/category.dart';
 import '../../debt/application/debt_providers.dart';
+import '../../notification/application/notification_providers.dart';
+import '../../notification/presentation/widgets/notification_sheet.dart';
 import '../../wallet/domain/wallet.dart';
 import '../application/dashboard_providers.dart';
 import 'widgets/expense_focus_card.dart';
@@ -239,18 +241,53 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           tooltip: 'Pencarian Global',
         ),
 
-        // Notification Icon
-        IconButton(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Tidak ada notifikasi baru.')),
+        // Notification Icon with Active Badge
+        Builder(
+          builder: (context) {
+            final unreadCount = ref.watch(unreadRemindersCountProvider);
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  onPressed: () => NotificationSheet.show(context),
+                  icon: Icon(
+                    unreadCount > 0
+                        ? Icons.notifications_active_rounded
+                        : Icons.notifications_none_rounded,
+                    color: unreadCount > 0 ? AppColors.primary : Colors.grey.shade700,
+                    size: 24,
+                  ),
+                  tooltip: 'Pusat Pengingat',
+                ),
+                if (unreadCount > 0)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: AppColors.expense,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        unreadCount > 9 ? '9+' : '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             );
           },
-          icon: Icon(
-            Icons.notifications_none_rounded,
-            color: Colors.grey.shade700,
-            size: 24,
-          ),
         ),
         const SizedBox(width: 4),
 

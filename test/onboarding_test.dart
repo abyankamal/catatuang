@@ -51,6 +51,11 @@ class FakeAppSettingsRepository implements AppSettingsRepository {
   }
 
   @override
+  Future<void> updateDebtReminder(bool isEnabled) async {
+    settings.isDebtReminderEnabled = isEnabled;
+  }
+
+  @override
   Future<void> clearAllData() async {}
 }
 
