@@ -388,6 +388,44 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.secondary),
                           onTap: () => context.push('/categories'),
                         ),
+                        const SizedBox(height: 16),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.indigo.withAlpha(20),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.handshake_outlined, color: Colors.indigo),
+                          ),
+                          title: const Text(
+                            'Utang & Piutang',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                          ),
+                          subtitle: const Text('Kelola catatan pinjaman & hak tagih'),
+                          trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.secondary),
+                          onTap: () => context.push('/debts'),
+                        ),
+                        const SizedBox(height: 16),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.teal.withAlpha(20),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.contacts_rounded, color: Colors.teal),
+                          ),
+                          title: const Text(
+                            'Buku Kontak',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                          ),
+                          subtitle: const Text('Kelola daftar relasi & pihak peminjam'),
+                          trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.secondary),
+                          onTap: () => context.push('/contacts'),
+                        ),
                       ],
                     ),
                   ),

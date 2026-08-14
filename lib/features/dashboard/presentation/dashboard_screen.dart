@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../category/domain/category.dart';
+import '../../debt/application/debt_providers.dart';
 import '../../wallet/domain/wallet.dart';
 import '../application/dashboard_providers.dart';
 import 'widgets/expense_focus_card.dart';
@@ -25,6 +27,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final recentTxAsync = ref.watch(recentTransactionsStreamProvider);
     final categoriesAsync = ref.watch(activeCategoriesStreamProvider);
     final expenseFocusAsync = ref.watch(dashboardExpenseFocusProvider);
+    final debtSummaryAsync = ref.watch(debtSummaryProvider);
 
     debugPrint(
       'DASHBOARD BUILD: summary=$summaryAsync, wallets=$walletsAsync, tx=$recentTxAsync, cat=$categoriesAsync',
@@ -57,6 +60,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ref.invalidate(activeWalletsStreamProvider);
             ref.invalidate(recentTransactionsStreamProvider);
             ref.invalidate(dashboardExpenseFocusProvider);
+            ref.invalidate(debtSummaryProvider);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -110,7 +114,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         child: Text('Gagal memuat ringkasan: $err'),
                       ),
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 16),
+
+                    // Debt & Receivable Quick Overview Banner
+                    _buildDebtQuickBanner(debtSummaryAsync),
+                    const SizedBox(height: 24),
 
                     // Recent Transactions Section (Aktivitas Terbaru)
                     _buildRecentTransactionsSection(
@@ -341,6 +349,110 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
+  Widget _buildDebtQuickBanner(AsyncValue<DebtSummary> debtSummaryAsync) {
+    return debtSummaryAsync.maybeWhen(
+      data: (summary) {
+        final hasActiveDebts = summary.remainingPayable > 0 || summary.remainingReceivable > 0;
+        final hasOverdue = summary.overdueCount > 0;
+
+        return InkWell(
+          onTap: () => context.push('/debts'),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: hasOverdue ? AppColors.expense.withAlpha(50) : Colors.grey.shade100,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(4),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: (hasOverdue ? AppColors.expense : AppColors.primary).withAlpha(20),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.handshake_outlined,
+                    color: hasOverdue ? AppColors.expense : AppColors.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'Utang & Piutang',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                          if (hasOverdue) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.expense.withAlpha(20),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${summary.overdueCount} Jatuh Tempo',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.expense,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        hasActiveDebts
+                            ? 'Utang: Rp ${CurrencyFormatter.format(summary.remainingPayable)} • Piutang: Rp ${CurrencyFormatter.format(summary.remainingReceivable)}'
+                            : 'Kelola catatan pinjaman & hak tagihan Anda',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.grey,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+
   Widget _buildEmptyState({required bool hasWallets}) {
     return Container(
       width: double.infinity,
@@ -392,3 +504,4 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 }
+

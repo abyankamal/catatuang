@@ -17,6 +17,12 @@ import '../../features/wallet/presentation/wallet_form_screen.dart';
 import '../../features/category/domain/category.dart';
 import '../../features/category/presentation/category_list_screen.dart';
 import '../../features/category/presentation/category_form_screen.dart';
+import '../../features/contact/domain/contact.dart';
+import '../../features/contact/presentation/contact_list_screen.dart';
+import '../../features/contact/presentation/contact_form_screen.dart';
+import '../../features/debt/domain/debt.dart';
+import '../../features/debt/presentation/debt_list_screen.dart';
+import '../../features/debt/presentation/debt_form_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -133,5 +139,41 @@ final appRouter = GoRouter(
         return CategoryFormScreen(existingCategory: category);
       },
     ),
+    // Fitur Utang & Piutang
+    GoRoute(
+      path: '/debts',
+      builder: (context, state) => const DebtListScreen(),
+    ),
+    GoRoute(
+      path: '/debts/add',
+      builder: (context, state) {
+        final type = state.extra as String?;
+        return DebtFormScreen(initialType: type ?? 'PAYABLE');
+      },
+    ),
+    GoRoute(
+      path: '/debts/edit',
+      builder: (context, state) {
+        final debt = state.extra as Debt;
+        return DebtFormScreen(existingDebt: debt);
+      },
+    ),
+    // Fitur Kontak
+    GoRoute(
+      path: '/contacts',
+      builder: (context, state) => const ContactListScreen(),
+    ),
+    GoRoute(
+      path: '/contacts/add',
+      builder: (context, state) => const ContactFormScreen(),
+    ),
+    GoRoute(
+      path: '/contacts/edit',
+      builder: (context, state) {
+        final contact = state.extra as Contact;
+        return ContactFormScreen(existingContact: contact);
+      },
+    ),
   ],
 );
+
