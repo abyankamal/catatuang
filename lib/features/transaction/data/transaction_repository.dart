@@ -254,6 +254,86 @@ class TransactionRepository {
     });
   }
 
+  /// Tarik Dana / Realisasi Tabungan dari Target Tabungan ke Dompet Reguler (AGENTS.md §4)
+  Future<void> withdrawSavings({
+    required String goalWalletSyncId,
+    required String destinationWalletSyncId,
+    required double amount,
+    required DateTime date,
+    String? notes,
+  }) async {
+    // 1. Period locking check (AGENTS.md §4)
+    final settings = await _isar.appSettings.where().findFirst();
+    if (settings?.lockedUntil != null && !date.isAfter(settings!.lockedUntil!)) {
+      throw LockedPeriodException();
+    }
+
+    if (amount <= 0) {
+      throw Exception('Nominal penarikan harus lebih dari 0.');
+    }
+
+    final goalWallet = await _isar.wallets.filter().syncIdEqualTo(goalWalletSyncId).findFirst();
+    final destWallet = await _isar.wallets.filter().syncIdEqualTo(destinationWalletSyncId).findFirst();
+
+    if (goalWallet == null || destWallet == null) {
+      throw Exception('Target tabungan atau dompet tujuan tidak ditemukan.');
+    }
+
+    if (goalWallet.balance < amount) {
+      throw Exception('Saldo tabungan "${goalWallet.name}" tidak mencukupi untuk ditarik.');
+    }
+
+    final now = DateTime.now();
+    final groupId = _uuid.v4();
+
+    await _isar.writeTxn(() async {
+      // 1. Potong saldo goal
+      goalWallet.balance -= amount;
+      goalWallet.updatedAt = now;
+      await _isar.wallets.put(goalWallet);
+
+      // 2. Tambah saldo dompet reguler penerima dana
+      destWallet.balance += amount;
+      destWallet.updatedAt = now;
+      await _isar.wallets.put(destWallet);
+
+      // 3. Catat TRANSFER_OUT dari goal wallet
+      final outDesc = notes != null && notes.isNotEmpty
+          ? 'Pencairan ke ${destWallet.name} ($notes)'
+          : 'Pencairan ke ${destWallet.name}';
+
+      final outTx = Transaction()
+        ..syncId = _uuid.v4()
+        ..type = 'TRANSFER_OUT'
+        ..amount = amount
+        ..date = date
+        ..walletSyncId = goalWalletSyncId
+        ..transactionGroupId = groupId
+        ..description = outDesc
+        ..createdAt = now
+        ..updatedAt = now;
+
+      // 4. Catat TRANSFER_IN ke destination wallet
+      final inDesc = notes != null && notes.isNotEmpty
+          ? 'Pencairan tabungan dari ${goalWallet.name} ($notes)'
+          : 'Pencairan tabungan dari ${goalWallet.name}';
+
+      final inTx = Transaction()
+        ..syncId = _uuid.v4()
+        ..type = 'TRANSFER_IN'
+        ..amount = amount
+        ..date = date
+        ..walletSyncId = destinationWalletSyncId
+        ..transactionGroupId = groupId
+        ..description = inDesc
+        ..createdAt = now
+        ..updatedAt = now;
+
+      await _isar.transactions.put(outTx);
+      await _isar.transactions.put(inTx);
+    });
+  }
+
   /// Calculate monthly total income and expense off-main-thread using Isolate.run()
   Future<MonthlySummary> calculateMonthlySummary(int year, int month) async {
     final startDate = DateTime(year, month, 1);

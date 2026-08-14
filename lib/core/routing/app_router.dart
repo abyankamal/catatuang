@@ -5,6 +5,7 @@ import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/goal/presentation/goal_list_screen.dart';
 import '../../features/goal/presentation/add_goal_screen.dart';
 import '../../features/goal/presentation/top_up_goal_screen.dart';
+import '../../features/goal/presentation/withdraw_goal_screen.dart';
 import '../../features/report/presentation/report_screen.dart';
 import '../../features/settings/presentation/profile_screen.dart';
 import '../../features/transaction/presentation/add_transaction_screen.dart';
@@ -96,6 +97,13 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final id = state.pathParameters['id']!;
         return TopUpGoalScreen(goalId: id);
+      },
+    ),
+    GoRoute(
+      path: '/withdraw_goal/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return WithdrawGoalScreen(goalId: id);
       },
     ),
     GoRoute(

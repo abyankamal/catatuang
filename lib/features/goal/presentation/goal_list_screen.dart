@@ -241,13 +241,26 @@ class _GoalCard extends ConsumerWidget {
                   icon: const Icon(Icons.more_vert_rounded, size: 20, color: Colors.grey),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   onSelected: (value) {
-                    if (value == 'edit') {
+                    if (value == 'withdraw') {
+                      context.push('/withdraw_goal/${goal.syncId}');
+                    } else if (value == 'edit') {
                       context.push('/edit_goal', extra: goal);
                     } else if (value == 'delete') {
                       _confirmDelete(context, ref);
                     }
                   },
                   itemBuilder: (context) => [
+                    if (goal.balance > 0)
+                      PopupMenuItem(
+                        value: 'withdraw',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.arrow_outward_rounded, size: 18, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            Text('Tarik Dana', style: GoogleFonts.outfit()),
+                          ],
+                        ),
+                      ),
                     PopupMenuItem(
                       value: 'edit',
                       child: Row(
@@ -353,50 +366,88 @@ class _GoalCard extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 if (goal.targetDate != null)
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today_rounded,
-                        size: 14,
-                        color: Colors.grey.shade500,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        DateFormatter.formatShortDate(goal.targetDate!),
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          size: 14,
+                          color: Colors.grey.shade500,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            DateFormatter.formatShortDate(goal.targetDate!),
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   )
                 else
-                  const SizedBox(),
+                  const Spacer(),
 
-                SizedBox(
-                  height: 36,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      context.push('/top_up_goal/${goal.syncId}');
-                    },
-                    icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                    label: Text(
-                      'Nabung',
-                      style: GoogleFonts.outfit(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (goal.balance > 0) ...[
+                      SizedBox(
+                        height: 36,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            context.push('/withdraw_goal/${goal.syncId}');
+                          },
+                          icon: const Icon(Icons.arrow_outward_rounded, size: 14, color: AppColors.primary),
+                          label: Text(
+                            'Tarik',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.primary),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    SizedBox(
+                      height: 36,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          context.push('/top_up_goal/${goal.syncId}');
+                        },
+                        icon: const Icon(Icons.add, size: 16, color: Colors.white),
+                        label: Text(
+                          'Nabung',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                        ),
                       ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                  ),
+                  ],
                 ),
               ],
             ),

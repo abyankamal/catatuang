@@ -71,6 +71,30 @@ class GoalController extends StateNotifier<AsyncValue<void>> {
     }
   }
 
+  Future<bool> withdrawGoal({
+    required String goalWalletSyncId,
+    required String destinationWalletSyncId,
+    required double amount,
+    required DateTime date,
+    String? notes,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      await _transactionRepo.withdrawSavings(
+        goalWalletSyncId: goalWalletSyncId,
+        destinationWalletSyncId: destinationWalletSyncId,
+        amount: amount,
+        date: date,
+        notes: notes,
+      );
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
+
   Future<bool> updateGoal({
     required int id,
     required String name,

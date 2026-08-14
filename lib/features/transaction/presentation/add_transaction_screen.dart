@@ -632,14 +632,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         children: [
                           const Icon(Icons.arrow_upward_rounded, size: 18, color: AppColors.expense),
                           const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              w.name,
-                              style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w600),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                          Text(
+                            w.name,
+                            style: GoogleFonts.hankenGrotesk(fontWeight: FontWeight.w600),
                           ),
-                          const SizedBox(width: 8),
+                          const Spacer(),
                           Text(
                             'Rp ${CurrencyFormatter.format(w.balance)}',
                             style: GoogleFonts.jetBrainsMono(fontSize: 12, color: Colors.grey.shade600),
@@ -692,17 +689,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             color: isSameAsSource ? Colors.grey : AppColors.income,
                           ),
                           const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              isSameAsSource ? '${w.name} (Dompet Sumber)' : w.name,
-                              style: GoogleFonts.hankenGrotesk(
-                                fontWeight: FontWeight.w600,
-                                color: isSameAsSource ? Colors.grey : AppColors.secondary,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            isSameAsSource ? '${w.name} (Dompet Sumber)' : w.name,
+                            style: GoogleFonts.hankenGrotesk(
+                              fontWeight: FontWeight.w600,
+                              color: isSameAsSource ? Colors.grey : AppColors.secondary,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const Spacer(),
                           Text(
                             'Rp ${CurrencyFormatter.format(w.balance)}',
                             style: GoogleFonts.jetBrainsMono(fontSize: 12, color: Colors.grey.shade600),
