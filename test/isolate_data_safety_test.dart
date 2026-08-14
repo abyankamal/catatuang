@@ -4,7 +4,6 @@ import 'package:catatuang/features/budget/data/budget_repository.dart';
 import 'package:catatuang/features/budget/domain/budget.dart';
 import 'package:catatuang/features/category/domain/category.dart';
 import 'package:catatuang/features/contact/domain/contact.dart';
-import 'package:catatuang/features/debt/data/debt_repository.dart';
 import 'package:catatuang/features/debt/domain/debt.dart';
 import 'package:catatuang/features/notification/data/notification_repository.dart';
 import 'package:catatuang/features/search/data/search_repository.dart';
