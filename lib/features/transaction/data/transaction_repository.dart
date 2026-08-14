@@ -204,11 +204,25 @@ class TransactionRepository {
     required double amount,
     required DateTime date,
   }) async {
+    // 1. Period locking check (AGENTS.md §4)
+    final settings = await _isar.appSettings.where().findFirst();
+    if (settings?.lockedUntil != null && !date.isAfter(settings!.lockedUntil!)) {
+      throw LockedPeriodException();
+    }
+
+    if (amount <= 0) {
+      throw Exception('Nominal tabungan harus lebih dari 0.');
+    }
+
     final sourceWallet = await _isar.wallets.filter().syncIdEqualTo(sourceWalletSyncId).findFirst();
     final goalWallet = await _isar.wallets.filter().syncIdEqualTo(goalWalletSyncId).findFirst();
 
     if (sourceWallet == null || goalWallet == null) {
       throw Exception('Kantong sumber atau Kantong tujuan tidak ditemukan.');
+    }
+
+    if (sourceWallet.balance < amount) {
+      throw Exception('Saldo kantong "${sourceWallet.name}" tidak mencukupi untuk menabung.');
     }
 
     final now = DateTime.now();

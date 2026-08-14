@@ -30,33 +30,52 @@ import '../../features/debt/presentation/debt_form_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
+class RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+
+  RouterNotifier(this._ref) {
+    _ref.listen(appSettingsStreamProvider, (previous, next) {
+      notifyListeners();
+    });
+  }
+
+  String? redirect(BuildContext context, GoRouterState state) {
+    final settings = _ref.read(appSettingsStreamProvider).valueOrNull;
+    // Jika data settings belum siap (masih loading stream awal), biarkan router melanjutkan
+    if (settings == null) return null;
+
+    final isGoingToOnboarding = state.matchedLocation == '/onboarding';
+    final hasCompleted = settings.hasCompletedOnboarding;
+
+    // Jika belum selesai onboarding dan bukan sedang menuju /onboarding
+    if (!hasCompleted && !isGoingToOnboarding) {
+      return '/onboarding';
+    }
+
+    // Jika sudah selesai onboarding dan mencoba ke /onboarding
+    if (hasCompleted && isGoingToOnboarding) {
+      return '/dashboard';
+    }
+
+    return null;
+  }
+}
+
+final routerNotifierProvider = Provider<RouterNotifier>((ref) {
+  final notifier = RouterNotifier(ref);
+  ref.onDispose(notifier.dispose);
+  return notifier;
+});
+
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final settingsAsync = ref.watch(appSettingsStreamProvider);
+  final notifier = ref.watch(routerNotifierProvider);
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/dashboard',
+    refreshListenable: notifier,
     errorBuilder: (context, state) => const NotFoundScreen(),
-    redirect: (context, state) {
-      final settings = settingsAsync.valueOrNull;
-      // Jika data settings belum siap (masih loading stream awal), biarkan router melanjutkan
-      if (settings == null) return null;
-
-      final isGoingToOnboarding = state.matchedLocation == '/onboarding';
-      final hasCompleted = settings.hasCompletedOnboarding;
-
-      // Jika belum selesai onboarding dan bukan sedang menuju /onboarding
-      if (!hasCompleted && !isGoingToOnboarding) {
-        return '/onboarding';
-      }
-
-      // Jika sudah selesai onboarding dan mencoba ke /onboarding
-      if (hasCompleted && isGoingToOnboarding) {
-        return '/dashboard';
-      }
-
-      return null;
-    },
+    redirect: notifier.redirect,
     routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {

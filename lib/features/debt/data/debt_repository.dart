@@ -191,6 +191,7 @@ class DebtRepository {
           ..amount = totalAmount
           ..date = startDate
           ..walletSyncId = walletSyncId
+          ..debtSyncId = debt.syncId
           ..createdAt = now
           ..updatedAt = now;
 
@@ -257,6 +258,7 @@ class DebtRepository {
         ..amount = paymentAmount
         ..date = date
         ..walletSyncId = walletSyncId
+        ..debtSyncId = debt.syncId
         ..createdAt = now
         ..updatedAt = now;
 
