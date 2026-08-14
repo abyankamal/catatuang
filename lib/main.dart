@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'core/database/database_provider.dart';
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/privacy_screen_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,6 +58,9 @@ class CatatUangApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       scrollBehavior: NoStretchScrollBehavior(),
       routerConfig: router,
+      builder: (context, child) => PrivacyScreenWrapper(
+        child: child ?? const SizedBox.shrink(),
+      ),
     );
   }
 }

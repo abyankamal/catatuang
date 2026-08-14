@@ -16,6 +16,8 @@ class AppSettings {
   
   bool hasCompletedOnboarding = false; // Flag status penyelesaian onboarding
   
+  bool isPrivacyScreenEnabled = true;  // Flag status privasi blur saat app switcher
+
   late DateTime createdAt;
   late DateTime updatedAt;
 }

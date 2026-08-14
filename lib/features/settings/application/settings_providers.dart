@@ -64,6 +64,19 @@ class SettingsController extends StateNotifier<AsyncValue<void>> {
     }
   }
 
+  Future<bool> setPrivacyScreenEnabled(bool isEnabled) async {
+    state = const AsyncValue.loading();
+    try {
+      await _repo.updatePrivacyScreen(isEnabled);
+      _ref.invalidate(appSettingsStreamProvider);
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
+  }
+
   Future<bool> clearAllData() async {
     state = const AsyncValue.loading();
     try {

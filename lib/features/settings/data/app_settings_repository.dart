@@ -98,6 +98,17 @@ class AppSettingsRepository {
     });
   }
 
+  /// Memperbarui preferensi privasi blur layar saat app switcher
+  Future<void> updatePrivacyScreen(bool isEnabled) async {
+    final settings = await getOrInitSettings();
+    settings.isPrivacyScreenEnabled = isEnabled;
+    settings.updatedAt = DateTime.now();
+
+    await _isar.writeTxn(() async {
+      await _isar.appSettings.put(settings);
+    });
+  }
+
   /// Reset/hapus seluruh isi database Isar secara instan
   Future<void> clearAllData() async {
     await _isar.writeTxn(() async {

@@ -46,6 +46,11 @@ class FakeAppSettingsRepository implements AppSettingsRepository {
   }
 
   @override
+  Future<void> updatePrivacyScreen(bool isEnabled) async {
+    settings.isPrivacyScreenEnabled = isEnabled;
+  }
+
+  @override
   Future<void> clearAllData() async {}
 }
 

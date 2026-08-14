@@ -809,6 +809,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.secondary),
                             onTap: () => context.push('/contacts'),
                           ),
+                          const SizedBox(height: 16),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            activeThumbColor: AppColors.primary,
+                            secondary: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.blueGrey.withAlpha(20),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.blur_on_rounded, color: Colors.blueGrey),
+                            ),
+                            title: Text(
+                              'Privasi Layar (Blur)',
+                              style: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                            ),
+                            subtitle: Text(
+                              'Samarkan tampilan saat membuka recent apps',
+                              style: GoogleFonts.hankenGrotesk(),
+                            ),
+                            value: settings?.isPrivacyScreenEnabled ?? true,
+                            onChanged: (val) {
+                              ref.read(settingsControllerProvider.notifier).setPrivacyScreenEnabled(val);
+                            },
+                          ),
                         ],
                       ),
                     ),
