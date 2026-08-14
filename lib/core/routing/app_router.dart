@@ -19,6 +19,7 @@ import '../../features/wallet/domain/wallet.dart';
 import '../../features/wallet/presentation/wallet_list_screen.dart';
 import '../../features/wallet/presentation/wallet_form_screen.dart';
 import '../../features/budget/presentation/budget_list_screen.dart';
+import '../../features/search/presentation/global_search_screen.dart';
 import '../../features/category/domain/category.dart';
 import '../../features/category/presentation/category_list_screen.dart';
 import '../../features/category/presentation/category_form_screen.dart';
@@ -232,6 +233,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     GoRoute(
       path: '/budgets',
       builder: (context, state) => const BudgetListScreen(),
+    ),
+    // Fitur Pencarian Global
+    GoRoute(
+      path: '/search',
+      builder: (context, state) => const GlobalSearchScreen(),
     ),
     // Fitur Onboarding
     GoRoute(

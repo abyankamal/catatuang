@@ -228,6 +228,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
         const Spacer(),
 
+        // Search Icon
+        IconButton(
+          onPressed: () => context.push('/search'),
+          icon: Icon(
+            Icons.search_rounded,
+            color: Colors.grey.shade700,
+            size: 24,
+          ),
+          tooltip: 'Pencarian Global',
+        ),
+
         // Notification Icon
         IconButton(
           onPressed: () {

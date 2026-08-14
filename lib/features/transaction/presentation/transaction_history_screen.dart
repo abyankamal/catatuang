@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -455,6 +456,13 @@ class TransactionHistoryScreen extends ConsumerWidget {
           ),
         ),
         centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search_rounded, color: AppColors.secondary),
+            tooltip: 'Cari Transaksi',
+            onPressed: () => context.push('/search'),
+          ),
+        ],
       ),
       body: Column(
         children: [
