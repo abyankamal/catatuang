@@ -20,6 +20,7 @@ dependencies:
   fl_chart: ^1.2.0
   pdf: ^3.11.1
   printing: ^5.13.2
+  file_saver: ^0.4.0
 
 dev_dependencies:
   flutter_test:

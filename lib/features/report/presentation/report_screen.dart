@@ -1,9 +1,9 @@
+import 'package:file_saver/file_saver.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -23,8 +23,18 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
   String _selectedType = 'EXPENSE'; // 'EXPENSE' or 'INCOME'
 
   static const List<String> _monthsIndonesian = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
   ];
 
   static const List<Color> _chartColors = [
@@ -47,7 +57,11 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     return currencyFormatter.format(amount);
   }
 
-  void _showMonthPicker(BuildContext context, WidgetRef ref, ReportFilterState currentFilter) {
+  void _showMonthPicker(
+    BuildContext context,
+    WidgetRef ref,
+    ReportFilterState currentFilter,
+  ) {
     int tempYear = currentFilter.year;
     int tempMonth = currentFilter.month;
 
@@ -115,12 +129,13 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                     GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        childAspectRatio: 2.5,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            childAspectRatio: 2.5,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                          ),
                       itemCount: 12,
                       itemBuilder: (context, index) {
                         final isSelected = (index + 1) == tempMonth;
@@ -133,15 +148,21 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                           borderRadius: BorderRadius.circular(10),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: isSelected ? AppColors.primary : Colors.grey.shade100,
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             alignment: Alignment.center,
                             child: Text(
                               _monthsIndonesian[index],
                               style: GoogleFonts.outfit(
-                                color: isSelected ? Colors.white : Colors.black87,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.black87,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                           ),
@@ -190,17 +211,42 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           .read(reportRepositoryProvider)
           .getDetailedMonthlyReport(filter.year, filter.month);
 
-      await Printing.layoutPdf(
-        name: 'Laporan_Keuangan_${_monthsIndonesian[filter.month - 1]}_${filter.year}',
-        onLayout: (PdfPageFormat format) async {
-          return await PdfReportService.generatePdf(detailedReport);
-        },
+      final pdfBytes = await PdfReportService.generatePdf(detailedReport);
+      final fileName =
+          'Laporan_Keuangan_${_monthsIndonesian[filter.month - 1]}_${filter.year}';
+
+      // Save directly to Downloads/Device storage
+      final path = await FileSaver.instance.saveFile(
+        name: fileName,
+        bytes: pdfBytes,
+        fileExtension: 'pdf',
+        mimeType: MimeType.pdf,
       );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              path.isNotEmpty
+                  ? 'Berhasil mengunduh PDF ($fileName.pdf)'
+                  : 'Berhasil menyimpan berkas PDF',
+            ),
+            backgroundColor: AppColors.income,
+            action: SnackBarAction(
+              label: 'Buka/Bagikan',
+              textColor: Colors.white,
+              onPressed: () {
+                Printing.sharePdf(bytes: pdfBytes, filename: '$fileName.pdf');
+              },
+            ),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal mengekspor laporan PDF: $e'),
+            content: Text('Gagal mengunduh laporan PDF: $e'),
             backgroundColor: AppColors.expense,
           ),
         );
@@ -208,7 +254,10 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     }
   }
 
-  Future<void> _exportCsv({required bool allTime, required ReportFilterState filter}) async {
+  Future<void> _exportCsv({
+    required bool allTime,
+    required ReportFilterState filter,
+  }) async {
     try {
       final repo = ref.read(reportRepositoryProvider);
       final List<DetailedTransactionItem> transactions;
@@ -216,11 +265,15 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
 
       if (allTime) {
         transactions = await repo.getAllTransactionsForExport();
-        fileName = 'CatatUang_Semua_Transaksi_${DateTime.now().year}.csv';
+        fileName = 'CatatUang_Semua_Transaksi_${DateTime.now().year}';
       } else {
-        final detailed = await repo.getDetailedMonthlyReport(filter.year, filter.month);
+        final detailed = await repo.getDetailedMonthlyReport(
+          filter.year,
+          filter.month,
+        );
         transactions = detailed.transactions;
-        fileName = 'CatatUang_Transaksi_${_monthsIndonesian[filter.month - 1]}_${filter.year}.csv';
+        fileName =
+            'CatatUang_Transaksi_${_monthsIndonesian[filter.month - 1]}_${filter.year}';
       }
 
       if (transactions.isEmpty) {
@@ -237,15 +290,38 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
 
       final csvBytes = await CsvReportService.generateCsvBytes(transactions);
 
-      await Printing.sharePdf(
+      // Save directly to Downloads/Device storage
+      final path = await FileSaver.instance.saveFile(
+        name: fileName,
         bytes: csvBytes,
-        filename: fileName,
+        fileExtension: 'csv',
+        mimeType: MimeType.csv,
       );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              path.isNotEmpty
+                  ? 'Berhasil mengunduh CSV ($fileName.csv)'
+                  : 'Berhasil menyimpan berkas CSV',
+            ),
+            backgroundColor: AppColors.income,
+            action: SnackBarAction(
+              label: 'Buka/Bagikan',
+              textColor: Colors.white,
+              onPressed: () {
+                Printing.sharePdf(bytes: csvBytes, filename: '$fileName.csv');
+              },
+            ),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal mengekspor CSV: $e'),
+            content: Text('Gagal mengunduh CSV: $e'),
             backgroundColor: AppColors.expense,
           ),
         );
@@ -305,11 +381,18 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                       color: Colors.red.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.picture_as_pdf_rounded, color: Colors.red, size: 24),
+                    child: const Icon(
+                      Icons.picture_as_pdf_rounded,
+                      color: Colors.red,
+                      size: 24,
+                    ),
                   ),
                   title: Text(
                     'Laporan PDF (Visual & Cetak)',
-                    style: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                    style: GoogleFonts.manrope(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.secondary,
+                    ),
                   ),
                   subtitle: Text(
                     'Periode ${_monthsIndonesian[filter.month - 1]} ${filter.year} lengkap dengan tabel dan rekap',
@@ -332,11 +415,18 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                       color: Colors.green.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.table_chart_rounded, color: Colors.green, size: 24),
+                    child: const Icon(
+                      Icons.table_chart_rounded,
+                      color: Colors.green,
+                      size: 24,
+                    ),
                   ),
                   title: Text(
                     'Spreadsheet CSV (Bulan Ini)',
-                    style: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                    style: GoogleFonts.manrope(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.secondary,
+                    ),
                   ),
                   subtitle: Text(
                     'Data transaksi bulan ${_monthsIndonesian[filter.month - 1]} ${filter.year} untuk Excel / Sheets',
@@ -359,11 +449,18 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                       color: Colors.blue.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.file_download_outlined, color: Colors.blue, size: 24),
+                    child: const Icon(
+                      Icons.file_download_outlined,
+                      color: Colors.blue,
+                      size: 24,
+                    ),
                   ),
                   title: Text(
                     'Spreadsheet CSV (Semua Transaksi)',
-                    style: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                    style: GoogleFonts.manrope(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.secondary,
+                    ),
                   ),
                   subtitle: Text(
                     'Seluruh riwayat transaksi (Full Backup) untuk pengolahan spreadsheet',
@@ -416,12 +513,18 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           // Month Selector Header
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
             child: InkWell(
               onTap: () => _showMonthPicker(context, ref, filter),
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withAlpha(15),
                   borderRadius: BorderRadius.circular(12),
@@ -432,7 +535,11 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.calendar_month, color: AppColors.primary, size: 20),
+                        const Icon(
+                          Icons.calendar_month,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           '${_monthsIndonesian[filter.month - 1]} ${filter.year}',
@@ -444,7 +551,10 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                         ),
                       ],
                     ),
-                    const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
+                    const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: AppColors.primary,
+                    ),
                   ],
                 ),
               ),
@@ -454,9 +564,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           Expanded(
             child: reportAsync.when(
               skipLoadingOnReload: true,
-              loading: () => const Center(
-                child: CircularProgressIndicator(),
-              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, stack) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
@@ -567,7 +675,10 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                         height: 48,
                         child: OutlinedButton.icon(
                           onPressed: () => _exportPdf(filter),
-                          icon: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.primary),
+                          icon: const Icon(
+                            Icons.picture_as_pdf_rounded,
+                            color: AppColors.primary,
+                          ),
                           label: Text(
                             'Export Laporan PDF (${_monthsIndonesian[filter.month - 1]} ${filter.year})',
                             style: GoogleFonts.outfit(
@@ -660,11 +771,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                   Icons.arrow_downward,
                 ),
               ),
-              Container(
-                width: 1,
-                height: 40,
-                color: Colors.grey.shade200,
-              ),
+              Container(width: 1, height: 40, color: Colors.grey.shade200),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(left: 12.0),
@@ -695,7 +802,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: report.netIncome >= 0 ? AppColors.income : AppColors.expense,
+                  color: report.netIncome >= 0
+                      ? AppColors.income
+                      : AppColors.expense,
                 ),
               ),
             ],
@@ -808,7 +917,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                           style: GoogleFonts.outfit(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: isExpense ? AppColors.expense : AppColors.income,
+                            color: isExpense
+                                ? AppColors.expense
+                                : AppColors.income,
                           ),
                         ),
                       ],
@@ -893,7 +1004,10 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: color.withAlpha(25),
                             borderRadius: BorderRadius.circular(6),
