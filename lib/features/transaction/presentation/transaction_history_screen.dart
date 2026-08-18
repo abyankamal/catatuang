@@ -186,6 +186,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
       (w) => w.syncId == tx.walletSyncId,
       orElse: () => Wallet()..name = 'Dompet',
     );
+    final isTransferTx = tx.type.contains('TRANSFER');
 
     showModalBottomSheet(
       context: context,
@@ -278,61 +279,96 @@ class TransactionHistoryScreen extends ConsumerWidget {
                 _detailRow('Catatan', tx.description!),
               ],
               const SizedBox(height: 28),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _confirmDelete(context, ref, tx);
-                      },
-                      icon: const Icon(Icons.delete_outline, color: AppColors.expense),
-                      label: Text(
-                        'Hapus',
-                        style: GoogleFonts.outfit(color: AppColors.expense),
+              if (isTransferTx) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _confirmDelete(context, ref, tx);
+                    },
+                    icon: const Icon(Icons.delete_outline, color: AppColors.expense),
+                    label: Text(
+                      'Hapus Transaksi Transfer',
+                      style: GoogleFonts.outfit(
+                        color: AppColors.expense,
+                        fontWeight: FontWeight.bold,
                       ),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.expense),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.expense),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AddTransactionScreen(
-                              existingTransaction: tx,
-                            ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '* Transaksi transfer tidak dapat diedit langsung untuk menjaga konsistensi saldo. Silakan hapus dan catat ulang transfer jika ada kesalahan.',
+                  style: GoogleFonts.hankenGrotesk(
+                    fontSize: 11,
+                    color: Colors.grey.shade600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ] else
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _confirmDelete(context, ref, tx);
+                        },
+                        icon: const Icon(Icons.delete_outline, color: AppColors.expense),
+                        label: Text(
+                          'Hapus',
+                          style: GoogleFonts.outfit(color: AppColors.expense),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.expense),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.edit_outlined, color: Colors.white),
-                      label: Text(
-                        'Edit',
-                        style: GoogleFonts.outfit(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddTransactionScreen(
+                                existingTransaction: tx,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                        label: Text(
+                          'Edit',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 12),
             ],
           ),

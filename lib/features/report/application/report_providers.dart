@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../transaction/application/transaction_history_provider.dart';
+import '../../dashboard/application/dashboard_providers.dart';
 import '../data/report_repository.dart';
 
 class ReportFilterState {
@@ -45,7 +45,7 @@ final monthlyReportProvider = FutureProvider.autoDispose<MonthlyReportData>((ref
   final filter = ref.watch(reportFilterProvider);
 
   // Watch transactions stream so report auto-updates when transactions are added/edited/deleted
-  ref.watch(transactionHistoryStreamProvider);
+  ref.watch(recentTransactionsStreamProvider);
 
   return repo.getMonthlyReport(filter.year, filter.month);
 });

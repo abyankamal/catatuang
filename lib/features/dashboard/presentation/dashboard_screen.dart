@@ -474,7 +474,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       const SizedBox(height: 2),
                       Text(
                         hasActiveDebts
-                            ? 'Utang: Rp ${CurrencyFormatter.format(summary.remainingPayable)} • Piutang: Rp ${CurrencyFormatter.format(summary.remainingReceivable)}'
+                            ? 'Utang: ${CurrencyFormatter.format(summary.remainingPayable)} • Piutang: ${CurrencyFormatter.format(summary.remainingReceivable)}'
                             : 'Kelola catatan pinjaman & hak tagihan Anda',
                         style: TextStyle(
                           fontSize: 12,

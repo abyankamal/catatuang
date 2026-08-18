@@ -47,17 +47,14 @@ class _WithdrawGoalScreenState extends ConsumerState<WithdrawGoalScreen> {
 
   Future<void> _selectDate() async {
     final now = DateTime.now();
-    final firstDayOfMonth = DateTime(now.year, now.month, 1);
     final today = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-    final initialDate = _selectedDate.isAfter(today)
-        ? today
-        : (_selectedDate.isBefore(firstDayOfMonth) ? firstDayOfMonth : _selectedDate);
+    final initialDate = _selectedDate.isAfter(today) ? today : _selectedDate;
 
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: firstDayOfMonth,
+      firstDate: DateTime(2020),
       lastDate: today,
       helpText: 'Pilih Tanggal Pencairan Tabungan',
     );
@@ -99,7 +96,7 @@ class _WithdrawGoalScreenState extends ConsumerState<WithdrawGoalScreen> {
     if (amount > goal.balance) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Nominal melebihi saldo tabungan saat ini (Rp ${CurrencyFormatter.format(goal.balance)}).'),
+          content: Text('Nominal melebihi saldo tabungan saat ini (${CurrencyFormatter.format(goal.balance)}).'),
           backgroundColor: AppColors.expense,
         ),
       );
@@ -123,7 +120,7 @@ class _WithdrawGoalScreenState extends ConsumerState<WithdrawGoalScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Dana tabungan sebesar Rp ${CurrencyFormatter.format(amount)} berhasil dicairkan!',
+                'Dana tabungan sebesar ${CurrencyFormatter.format(amount)} berhasil dicairkan!',
               ),
               backgroundColor: AppColors.income,
             ),
@@ -231,7 +228,7 @@ class _WithdrawGoalScreenState extends ConsumerState<WithdrawGoalScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Target: Rp ${CurrencyFormatter.format(target)}',
+                                      'Target: ${CurrencyFormatter.format(target)}',
                                       style: GoogleFonts.hankenGrotesk(
                                         fontSize: 12,
                                         color: Colors.grey.shade600,
@@ -263,7 +260,7 @@ class _WithdrawGoalScreenState extends ConsumerState<WithdrawGoalScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Rp ${CurrencyFormatter.format(balance)}',
+                                      CurrencyFormatter.format(balance),
                                       style: GoogleFonts.manrope(
                                         fontSize: 20,
                                         fontWeight: FontWeight.w800,
@@ -360,7 +357,7 @@ class _WithdrawGoalScreenState extends ConsumerState<WithdrawGoalScreen> {
                         final num = double.tryParse(val.replaceAll(RegExp(r'[^0-9]'), ''));
                         if (num == null || num <= 0) return 'Nominal tidak valid';
                         if (num > balance) {
-                          return 'Nominal melebihi saldo tabungan (Rp ${CurrencyFormatter.format(balance)})';
+                          return 'Nominal melebihi saldo tabungan (${CurrencyFormatter.format(balance)})';
                         }
                         return null;
                       },
@@ -414,7 +411,7 @@ class _WithdrawGoalScreenState extends ConsumerState<WithdrawGoalScreen> {
                                       ),
                                       const Spacer(),
                                       Text(
-                                        'Rp ${CurrencyFormatter.format(w.balance)}',
+                                        CurrencyFormatter.format(w.balance),
                                         style: GoogleFonts.jetBrainsMono(
                                           fontSize: 12,
                                           color: Colors.grey.shade600,

@@ -284,7 +284,7 @@ class _DebtListScreenState extends ConsumerState<DebtListScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Rp ${CurrencyFormatter.format(summary.remainingPayable)}',
+                  CurrencyFormatter.format(summary.remainingPayable),
                   style: GoogleFonts.manrope(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -327,7 +327,7 @@ class _DebtListScreenState extends ConsumerState<DebtListScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Rp ${CurrencyFormatter.format(summary.remainingReceivable)}',
+                  CurrencyFormatter.format(summary.remainingReceivable),
                   style: GoogleFonts.manrope(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,

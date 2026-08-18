@@ -68,21 +68,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   Future<void> _selectDate() async {
     final now = DateTime.now();
-    final firstDayOfMonth = DateTime(now.year, now.month, 1);
     final today = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-    final initialDate = _selectedDate.isAfter(today)
-        ? today
-        : (_selectedDate.isBefore(firstDayOfMonth)
-              ? firstDayOfMonth
-              : _selectedDate);
+    final initialDate = _selectedDate.isAfter(today) ? today : _selectedDate;
 
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: firstDayOfMonth,
+      firstDate: DateTime(2020),
       lastDate: today,
-      helpText: 'Pilih Tanggal Transaksi (Bulan Ini)',
+      helpText: 'Pilih Tanggal Transaksi',
     );
     if (picked != null) {
       final isPickedToday =
@@ -132,15 +127,25 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final now = DateTime.now();
-    final firstDayOfMonth = DateTime(now.year, now.month, 1);
     final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-    if (_selectedDate.isAfter(endOfToday) ||
-        _selectedDate.isBefore(firstDayOfMonth)) {
+    if (_selectedDate.isAfter(endOfToday)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Tanggal transaksi hanya diperbolehkan untuk bulan ini dan maksimal hari ini.',
+            'Tanggal transaksi tidak boleh melebihi hari ini.',
+          ),
+          backgroundColor: AppColors.expense,
+        ),
+      );
+      return;
+    }
+
+    if (isTransfer && isEditMode) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Transaksi transfer tidak dapat diedit langsung. Silakan hapus dan catat ulang transfer.',
           ),
           backgroundColor: AppColors.expense,
         ),

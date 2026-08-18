@@ -605,7 +605,7 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
                                                 ),
                                                 const Spacer(),
                                                 Text(
-                                                  'Rp ${CurrencyFormatter.format(w.balance)}',
+                                                  CurrencyFormatter.format(w.balance),
                                                   style: GoogleFonts.jetBrainsMono(
                                                     fontSize: 11,
                                                     color: Colors.grey.shade600,

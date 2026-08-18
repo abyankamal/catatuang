@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/exceptions/locked_period_exception.dart';
 import '../../category/domain/category.dart';
+import '../../debt/domain/debt.dart';
 import '../../settings/domain/app_settings.dart';
 import '../../wallet/domain/wallet.dart';
 import '../domain/transaction.dart';
@@ -492,6 +493,24 @@ class TransactionRepository {
           wallet.updatedAt = DateTime.now();
           await _isar.wallets.put(wallet);
         }
+
+        // Revert debt paidAmount if this was a debt payment transaction
+        if (tx.debtSyncId != null && tx.debtSyncId!.isNotEmpty) {
+          final debt = await _isar.debts
+              .filter()
+              .syncIdEqualTo(tx.debtSyncId!)
+              .findFirst();
+          if (debt != null) {
+            final isPayment = (debt.type == 'PAYABLE' && tx.type == 'EXPENSE') ||
+                (debt.type == 'RECEIVABLE' && tx.type == 'INCOME');
+            if (isPayment) {
+              debt.paidAmount = (debt.paidAmount - tx.amount).clamp(0.0, debt.totalAmount);
+              debt.updatedAt = DateTime.now();
+              await _isar.debts.put(debt);
+            }
+          }
+        }
+
         await _isar.transactions.delete(tx.id);
       }
     });

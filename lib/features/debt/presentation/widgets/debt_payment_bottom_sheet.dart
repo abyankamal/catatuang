@@ -133,8 +133,8 @@ class _DebtPaymentBottomSheetState extends ConsumerState<DebtPaymentBottomSheet>
             SnackBar(
               content: Text(
                 isPayable
-                    ? 'Pembayaran utang sebesar Rp ${CurrencyFormatter.format(amount)} berhasil dicatat!'
-                    : 'Penerimaan piutang sebesar Rp ${CurrencyFormatter.format(amount)} berhasil dicatat!',
+                    ? 'Pembayaran utang sebesar ${CurrencyFormatter.format(amount)} berhasil dicatat!'
+                    : 'Penerimaan piutang sebesar ${CurrencyFormatter.format(amount)} berhasil dicatat!',
               ),
               backgroundColor: isPayable ? AppColors.expense : AppColors.income,
             ),
@@ -249,7 +249,7 @@ class _DebtPaymentBottomSheetState extends ConsumerState<DebtPaymentBottomSheet>
                             ),
                           ),
                           Text(
-                            'Rp ${CurrencyFormatter.format(remaining)}',
+                            CurrencyFormatter.format(remaining),
                             style: GoogleFonts.manrope(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
@@ -365,7 +365,7 @@ class _DebtPaymentBottomSheetState extends ConsumerState<DebtPaymentBottomSheet>
                                   ),
                                   const Spacer(),
                                   Text(
-                                    'Rp ${CurrencyFormatter.format(w.balance)}',
+                                    CurrencyFormatter.format(w.balance),
                                     style: GoogleFonts.jetBrainsMono(
                                       fontSize: 12,
                                       color: Colors.grey.shade600,

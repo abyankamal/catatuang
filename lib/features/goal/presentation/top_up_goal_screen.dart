@@ -175,7 +175,7 @@ class _TopUpGoalScreenState extends ConsumerState<TopUpGoalScreen> {
                             Expanded(
                               child: Text(
                                 _selectedWallet != null 
-                                    ? '${_selectedWallet!.name} (Rp ${CurrencyFormatter.format(_selectedWallet!.balance)})'
+                                    ? '${_selectedWallet!.name} (${CurrencyFormatter.format(_selectedWallet!.balance)})'
                                     : 'Pilih Kantong',
                                 style: GoogleFonts.hankenGrotesk(
                                   fontSize: 15,
@@ -265,7 +265,7 @@ class _TopUpGoalScreenState extends ConsumerState<TopUpGoalScreen> {
                         child: Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary),
                       ),
                       title: Text(wallet.name, style: GoogleFonts.manrope(fontWeight: FontWeight.bold)),
-                      subtitle: Text('Saldo: Rp ${CurrencyFormatter.format(wallet.balance)}'),
+                      subtitle: Text('Saldo: ${CurrencyFormatter.format(wallet.balance)}'),
                       onTap: () {
                         setState(() {
                           _selectedWallet = wallet;
