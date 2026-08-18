@@ -29,6 +29,7 @@ import '../../features/contact/presentation/contact_form_screen.dart';
 import '../../features/debt/domain/debt.dart';
 import '../../features/debt/presentation/debt_list_screen.dart';
 import '../../features/debt/presentation/debt_form_screen.dart';
+import '../../features/splash/presentation/splash_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -43,10 +44,15 @@ class RouterNotifier extends ChangeNotifier {
 
   String? redirect(BuildContext context, GoRouterState state) {
     final settings = _ref.read(appSettingsStreamProvider).valueOrNull;
+    final isGoingToSplash = state.matchedLocation == '/splash';
     final isGoingToOnboarding = state.matchedLocation == '/onboarding';
 
+    // Allow splash screen to display initial animation and perform transition
+    if (isGoingToSplash) {
+      return null;
+    }
+
     // Jika database kosong / settings belum ada / belum onboarding:
-    // (Misal setelah reset data atau fresh install)
     final hasCompleted = settings?.hasCompletedOnboarding ?? false;
 
     // Jika belum selesai onboarding dan bukan sedang menuju /onboarding
@@ -74,11 +80,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/dashboard',
+    initialLocation: '/splash',
     refreshListenable: notifier,
     errorBuilder: (context, state) => const NotFoundScreen(),
     redirect: notifier.redirect,
     routes: [
+    GoRoute(
+      path: '/splash',
+      builder: (context, state) => const SplashScreen(),
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         return MainNavigationScreen(navigationShell: navigationShell);
