@@ -100,29 +100,38 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     children: [
                       // Glowing Logo Container
                       Container(
-                        width: 96,
-                        height: 96,
+                        width: 108,
+                        height: 108,
                         decoration: BoxDecoration(
-                          color: Colors.white,
                           borderRadius: BorderRadius.circular(28),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withAlpha(50),
-                              blurRadius: 24,
-                              offset: const Offset(0, 8),
+                              color: Colors.black.withAlpha(60),
+                              blurRadius: 28,
+                              offset: const Offset(0, 10),
                             ),
                             BoxShadow(
-                              color: Colors.white.withAlpha(40),
-                              blurRadius: 30,
-                              spreadRadius: 2,
+                              color: const Color(0xFF10B981).withAlpha(40),
+                              blurRadius: 36,
+                              spreadRadius: 4,
                             ),
                           ],
                         ),
-                        child: Center(
-                          child: Icon(
-                            Icons.account_balance_wallet_rounded,
-                            size: 50,
-                            color: AppColors.primary,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(28),
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            width: 108,
+                            height: 108,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: Colors.white,
+                              child: const Icon(
+                                Icons.account_balance_wallet_rounded,
+                                size: 54,
+                                color: AppColors.primary,
+                              ),
+                            ),
                           ),
                         ),
                       ),
