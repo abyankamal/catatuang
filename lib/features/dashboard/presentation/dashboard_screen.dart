@@ -153,10 +153,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildHeader() {
-    final settings = ref.watch(appSettingsStreamProvider).valueOrNull;
-    final userName = settings?.userName;
-    final avatarIcon = settings?.avatarIcon;
-
     IconData getAvatarIconData(String? iconName) {
       switch (iconName) {
         case 'face':
@@ -179,7 +175,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       }
     }
 
-    // Time-based greeting helper
     String getTimeBasedGreeting() {
       final hour = DateTime.now().hour;
       if (hour >= 4 && hour < 11) {
@@ -193,36 +188,42 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       }
     }
 
-    final greeting = getTimeBasedGreeting();
-    final greetingText = userName != null && userName.isNotEmpty
-        ? '$greeting, $userName!'
-        : '$greeting!';
-
     return Row(
       children: [
-        // App Title on Top (Big & Purple) & Greeting below (Small & Black)
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Catat Uang',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                color: AppColors.primary,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              greetingText,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-          ],
+        // App Title on Top & Greeting below (Isolated via Consumer)
+        Consumer(
+          builder: (context, ref, child) {
+            final settings = ref.watch(appSettingsStreamProvider).valueOrNull;
+            final userName = settings?.userName;
+            final greeting = getTimeBasedGreeting();
+            final greetingText = userName != null && userName.isNotEmpty
+                ? '$greeting, $userName!'
+                : '$greeting!';
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Catat Uang',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.primary,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  greetingText,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         const Spacer(),
 
@@ -237,9 +238,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           tooltip: 'Pencarian Global',
         ),
 
-        // Notification Icon with Active Badge
-        Builder(
-          builder: (context) {
+        // Notification Icon with Active Badge (Isolated via Consumer)
+        Consumer(
+          builder: (context, ref, child) {
             final unreadCount = ref.watch(unreadRemindersCountProvider);
             return Stack(
               clipBehavior: Clip.none,
@@ -287,36 +288,44 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
         const SizedBox(width: 4),
 
-        // Profile Avatar
-        GestureDetector(
-          onTap: () => context.push('/profile'),
-          child: Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: AppColors.secondary,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(20),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
+        // Profile Avatar (Isolated via Consumer)
+        Consumer(
+          builder: (context, ref, child) {
+            final settings = ref.watch(appSettingsStreamProvider).valueOrNull;
+            final avatarIcon = settings?.avatarIcon;
+
+            return GestureDetector(
+              onTap: () => context.push('/profile'),
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.secondary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(20),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Center(
-              child: Icon(
-                getAvatarIconData(avatarIcon),
-                color: Colors.white,
-                size: 20,
+                child: Center(
+                  child: Icon(
+                    getAvatarIconData(avatarIcon),
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ],
     );
   }
+
 
   Widget _buildRecentTransactionsSection({
     required AsyncValue<List<dynamic>> recentTxAsync,
