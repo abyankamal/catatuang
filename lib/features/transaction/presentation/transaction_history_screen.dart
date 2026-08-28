@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../category/domain/category.dart';
 import '../../dashboard/application/dashboard_providers.dart';
 import '../../wallet/domain/wallet.dart';
@@ -21,14 +22,18 @@ class TransactionHistoryScreen extends ConsumerWidget {
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
   ];
 
-  String _formatCurrency(double amount) {
-    final currencyFormatter = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    );
-    return currencyFormatter.format(amount);
-  }
+  static final Category _fallbackCategory = Category()
+    ..name = 'Tanpa Kategori'
+    ..icon = 'help_outline';
+
+  static final Wallet _fallbackWallet = Wallet()..name = 'Dompet';
+
+  // Cached DateFormatters to eliminate repeated locale pattern parsing
+  static final DateFormat _dateFormatKey = DateFormat('yyyy-MM-dd');
+  static final DateFormat _timeFormat = DateFormat('HH:mm');
+  static final DateFormat _detailDateTimeFormat = DateFormat('dd MMMM yyyy, HH:mm', 'id_ID');
+  static final DateFormat _shortDateFormat = DateFormat('dd MMM yyyy', 'id_ID');
+  static final DateFormat _fullDateFormat = DateFormat('EEEE, dd MMMM yyyy', 'id_ID');
 
   void _showMonthPicker(BuildContext context, WidgetRef ref, TransactionHistoryFilter currentFilter) {
     int tempYear = currentFilter.year;
@@ -167,25 +172,15 @@ class TransactionHistoryScreen extends ConsumerWidget {
     );
   }
 
-
   void _showDetailBottomSheet(
     BuildContext context,
     WidgetRef ref,
     Transaction tx,
-    List<Category> categories,
-    List<Wallet> wallets,
+    Map<String, Category> categoryMap,
+    Map<String, Wallet> walletMap,
   ) {
-    final category = categories.firstWhere(
-      (c) => c.syncId == tx.categorySyncId,
-      orElse: () => Category()
-        ..name = 'Tanpa Kategori'
-        ..icon = 'help_outline',
-    );
-
-    final wallet = wallets.firstWhere(
-      (w) => w.syncId == tx.walletSyncId,
-      orElse: () => Wallet()..name = 'Dompet',
-    );
+    final category = categoryMap[tx.categorySyncId ?? ''] ?? _fallbackCategory;
+    final wallet = walletMap[tx.walletSyncId] ?? _fallbackWallet;
     final isTransferTx = tx.type.contains('TRANSFER');
 
     showModalBottomSheet(
@@ -247,7 +242,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          DateFormat('dd MMMM yyyy, HH:mm', 'id_ID').format(tx.date),
+                          _detailDateTimeFormat.format(tx.date),
                           style: GoogleFonts.outfit(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -257,7 +252,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
                     ),
                   ),
                   Text(
-                    '${tx.type == 'INCOME' ? '+' : tx.type == 'EXPENSE' ? '-' : ''}${_formatCurrency(tx.amount)}',
+                    '${tx.type == 'INCOME' ? '+' : tx.type == 'EXPENSE' ? '-' : ''}${CurrencyFormatter.format(tx.amount)}',
                     style: GoogleFonts.outfit(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -478,6 +473,10 @@ class TransactionHistoryScreen extends ConsumerWidget {
     final wallets = walletsAsync.asData?.value ?? [];
     final categories = categoriesAsync.asData?.value ?? [];
 
+    // Precalculate O(1) Hash Maps once per build to eliminate O(N*M) lookups during scroll
+    final categoryMap = {for (final c in categories) c.syncId: c};
+    final walletMap = {for (final w in wallets) w.syncId: w};
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -688,7 +687,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _formatCurrency(summary.totalIncome),
+                          CurrencyFormatter.format(summary.totalIncome),
                           style: GoogleFonts.outfit(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -724,7 +723,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            _formatCurrency(summary.totalExpense),
+                            CurrencyFormatter.format(summary.totalExpense),
                             style: GoogleFonts.outfit(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -791,10 +790,10 @@ class TransactionHistoryScreen extends ConsumerWidget {
                   );
                 }
 
-                // Group transactions by Date
+                // Group transactions by Date key (using cached DateFormat)
                 final Map<String, List<Transaction>> grouped = {};
                 for (final tx in transactions) {
-                  final dateKey = DateFormat('yyyy-MM-dd').format(tx.date);
+                  final dateKey = _dateFormatKey.format(tx.date);
                   grouped.putIfAbsent(dateKey, () => []).add(tx);
                 }
 
@@ -829,92 +828,85 @@ class TransactionHistoryScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(16),
                             side: BorderSide(color: Colors.grey.shade200),
                           ),
-                          child: ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: txsInDate.length,
-                            separatorBuilder: (context, i) => Divider(
-                              height: 1,
-                              indent: 16,
-                              endIndent: 16,
-                              color: Colors.grey.shade100,
-                            ),
-                            itemBuilder: (context, i) {
-                              final tx = txsInDate[i];
-
-                              final category = categories.firstWhere(
-                                (c) => c.syncId == tx.categorySyncId,
-                                orElse: () => Category()
-                                  ..name = 'Tanpa Kategori'
-                                  ..icon = 'help_outline',
-                              );
-
-                              final wallet = wallets.firstWhere(
-                                (w) => w.syncId == tx.walletSyncId,
-                                orElse: () => Wallet()..name = 'Dompet',
-                              );
-
-                              final isIncome = tx.type == 'INCOME';
-                              final isExpense = tx.type == 'EXPENSE';
-
-                              return ListTile(
-                                onTap: () => _showDetailBottomSheet(
-                                  context,
-                                  ref,
-                                  tx,
-                                  categories,
-                                  wallets,
-                                ),
-                                leading: CircleAvatar(
-                                  backgroundColor: isIncome
-                                      ? AppColors.income.withAlpha(20)
-                                      : isExpense
-                                          ? AppColors.expense.withAlpha(20)
-                                          : Colors.blue.withAlpha(20),
-                                  child: Icon(
-                                    isIncome
-                                        ? Icons.arrow_downward
-                                        : isExpense
-                                            ? Icons.arrow_upward
-                                            : Icons.swap_horiz,
-                                    color: isIncome
-                                        ? AppColors.income
-                                        : isExpense
-                                            ? AppColors.expense
-                                            : Colors.blue,
-                                    size: 20,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              for (int i = 0; i < txsInDate.length; i++) ...[
+                                if (i > 0)
+                                  Divider(
+                                    height: 1,
+                                    indent: 16,
+                                    endIndent: 16,
+                                    color: Colors.grey.shade100,
                                   ),
-                                ),
-                                title: Text(
-                                  tx.description != null && tx.description!.isNotEmpty
-                                      ? tx.description!
-                                      : category.name,
-                                  style: GoogleFonts.outfit(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  '${wallet.name} • ${DateFormat('HH:mm').format(tx.date)}',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                                trailing: Text(
-                                  '${isIncome ? '+' : isExpense ? '-' : ''}${_formatCurrency(tx.amount)}',
-                                  style: GoogleFonts.outfit(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    color: isIncome
-                                        ? AppColors.income
-                                        : isExpense
-                                            ? AppColors.expense
-                                            : AppColors.secondary,
-                                  ),
-                                ),
-                              );
-                            },
+                                () {
+                                  final tx = txsInDate[i];
+                                  final category = categoryMap[tx.categorySyncId ?? ''] ?? _fallbackCategory;
+                                  final wallet = walletMap[tx.walletSyncId] ?? _fallbackWallet;
+
+                                  final isIncome = tx.type == 'INCOME';
+                                  final isExpense = tx.type == 'EXPENSE';
+
+                                  return ListTile(
+                                    onTap: () => _showDetailBottomSheet(
+                                      context,
+                                      ref,
+                                      tx,
+                                      categoryMap,
+                                      walletMap,
+                                    ),
+                                    leading: CircleAvatar(
+                                      backgroundColor: isIncome
+                                          ? AppColors.income.withAlpha(20)
+                                          : isExpense
+                                              ? AppColors.expense.withAlpha(20)
+                                              : Colors.blue.withAlpha(20),
+                                      child: Icon(
+                                        isIncome
+                                            ? Icons.arrow_downward
+                                            : isExpense
+                                                ? Icons.arrow_upward
+                                                : Icons.swap_horiz,
+                                        color: isIncome
+                                            ? AppColors.income
+                                            : isExpense
+                                                ? AppColors.expense
+                                                : Colors.blue,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      tx.description != null && tx.description!.isNotEmpty
+                                          ? tx.description!
+                                          : category.name,
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      '${wallet.name} • ${_timeFormat.format(tx.date)}',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    trailing: Text(
+                                      '${isIncome ? '+' : isExpense ? '-' : ''}${CurrencyFormatter.format(tx.amount)}',
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: isIncome
+                                            ? AppColors.income
+                                            : isExpense
+                                                ? AppColors.expense
+                                                : AppColors.secondary,
+                                      ),
+                                    ),
+                                  );
+                                }(),
+                              ],
+                            ],
                           ),
                         ),
                       ],
@@ -936,11 +928,11 @@ class TransactionHistoryScreen extends ConsumerWidget {
     final checkDate = DateTime(date.year, date.month, date.day);
 
     if (checkDate == today) {
-      return 'Hari ini - ${DateFormat('dd MMM yyyy', 'id_ID').format(date)}';
+      return 'Hari ini - ${_shortDateFormat.format(date)}';
     } else if (checkDate == yesterday) {
-      return 'Kemarin - ${DateFormat('dd MMM yyyy', 'id_ID').format(date)}';
+      return 'Kemarin - ${_shortDateFormat.format(date)}';
     } else {
-      return DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(date);
+      return _fullDateFormat.format(date);
     }
   }
 }
