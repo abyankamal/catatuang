@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../application/report_providers.dart';
 import '../data/csv_report_service.dart';
 import '../data/pdf_report_service.dart';
@@ -48,16 +49,10 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     Color(0xFF64748B), // Slate
   ];
 
-  String _formatCurrency(double amount) {
-    final currencyFormatter = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    );
-    return currencyFormatter.format(amount);
-  }
+  String _formatCurrency(double amount) => CurrencyFormatter.format(amount);
 
   void _showMonthPicker(
+
     BuildContext context,
     WidgetRef ref,
     ReportFilterState currentFilter,

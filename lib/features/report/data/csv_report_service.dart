@@ -4,9 +4,13 @@ import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/utils/currency_formatter.dart';
 import 'report_repository.dart';
 
 class CsvReportService {
+  static final DateFormat _dateFormatter = DateFormat('yyyy-MM-dd');
+  static final DateFormat _timeFormatter = DateFormat('HH:mm:ss');
+
   /// Generate CSV Bytes with UTF-8 BOM (\uFEFF) for Excel compatibility (RFC 4180)
   static Future<Uint8List> generateCsvBytes(List<DetailedTransactionItem> transactions) async {
     final rawData = transactions.map((t) => {
@@ -40,14 +44,6 @@ class CsvReportService {
       'Tanggal,Waktu,Tipe Transaksi,Kategori,Dompet,Nominal (Rp),Nominal Terformat,Catatan',
     );
 
-    final dateFormatter = DateFormat('yyyy-MM-dd');
-    final timeFormatter = DateFormat('HH:mm:ss');
-    final rupiahFormatter = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    );
-
     for (final item in items) {
       final date = DateTime.parse(item['date'] as String);
       final type = item['type'] as String;
@@ -57,10 +53,11 @@ class CsvReportService {
       final notes = item['notes'] as String?;
 
       final typeLabel = _getTypeLabel(type);
-      final dateStr = dateFormatter.format(date);
-      final timeStr = timeFormatter.format(date);
+      final dateStr = _dateFormatter.format(date);
+      final timeStr = _timeFormatter.format(date);
       final rawAmountStr = amount.toStringAsFixed(0);
-      final formattedAmountStr = rupiahFormatter.format(amount);
+      final formattedAmountStr = CurrencyFormatter.format(amount);
+
 
       final row = [
         _escapeCsvCell(dateStr),

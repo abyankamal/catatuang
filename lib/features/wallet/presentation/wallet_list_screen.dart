@@ -2,23 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../application/wallet_controller.dart';
 import '../domain/wallet.dart';
 
 class WalletListScreen extends ConsumerWidget {
   const WalletListScreen({super.key});
 
-  String _formatCurrency(double amount) {
-    final formatter = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    );
-    return formatter.format(amount);
-  }
+  String _formatCurrency(double amount) => CurrencyFormatter.format(amount);
+
 
   void _confirmDelete(BuildContext context, WidgetRef ref, Wallet wallet) {
     showDialog(

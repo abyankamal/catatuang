@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../../../core/utils/currency_formatter.dart';
 import 'report_repository.dart';
 
 class PdfReportService {
@@ -12,21 +13,16 @@ class PdfReportService {
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
   ];
 
+  static final DateFormat _dateFormat = DateFormat('d MMM yyyy, HH:mm', 'id_ID');
+
   static String _formatRupiah(double amount) {
-    final formatter = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    );
-    if (amount < 0) {
-      return '-${formatter.format(amount.abs())}';
-    }
-    return formatter.format(amount);
+    return CurrencyFormatter.format(amount);
   }
 
   static String _formatDate(DateTime date) {
-    return DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(date);
+    return _dateFormat.format(date);
   }
+
 
   static String _formatShortDate(DateTime date) {
     return DateFormat('d MMM yyyy', 'id_ID').format(date);
