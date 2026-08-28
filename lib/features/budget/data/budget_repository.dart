@@ -1,7 +1,8 @@
 import 'dart:isolate';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:isar/isar.dart';
 import 'package:uuid/uuid.dart';
 
@@ -240,57 +241,79 @@ class BudgetRepository {
         .findAll();
 
     final categories = await _isar.categorys.where().findAll();
+    final catMap = {for (final c in categories) c.syncId: c};
 
-    final catMap = <String, Map<String, dynamic>>{};
-    for (final c in categories) {
-      catMap[c.syncId] = {
-        'name': c.name,
-        'icon': c.icon,
-        'color': c.colorValue,
-      };
+    // 1. Direct computation on main thread for smaller datasets
+    if (kIsWeb || (expenses.length < 50 && activeBudgets.length < 20)) {
+      return _computeBudgetDirect(activeBudgets, expenses, catMap, year, month);
     }
 
-    final rawBudgets = activeBudgets.map((b) => {
-      'id': b.id,
-      'syncId': b.syncId,
-      'categorySyncId': b.categorySyncId,
-      'monthlyLimit': b.monthlyLimit,
-      'year': b.year,
-      'month': b.month,
-      'isActive': b.isActive,
-      'createdAt': b.createdAt.toIso8601String(),
-      'updatedAt': b.updatedAt.toIso8601String(),
-    }).toList();
-
-    final rawExpenses = expenses.map((e) => {
-      'categorySyncId': e.categorySyncId,
-      'amount': e.amount,
-    }).toList();
-
-    if (kIsWeb || (rawExpenses.length < 50 && rawBudgets.length < 20)) {
-      return _computeBudgetAggregation(rawBudgets, rawExpenses, catMap, year, month);
+    // 2. Lightweight Isolate computation for larger datasets
+    final expenseMap = <String, double>{};
+    for (final exp in expenses) {
+      final catId = exp.categorySyncId;
+      if (catId != null) {
+        expenseMap[catId] = (expenseMap[catId] ?? 0.0) + exp.amount;
+      }
     }
 
-    // Eksekusi di isolate terpisah
-    return await Isolate.run(() {
-      return _computeBudgetAggregation(rawBudgets, rawExpenses, catMap, year, month);
-    });
+    final payload = _BudgetIsolatePayload(
+      budgetLimits: {for (final b in activeBudgets) b.syncId: b.monthlyLimit},
+      budgetCategoryIds: {for (final b in activeBudgets) b.syncId: b.categorySyncId},
+      expenseByCategory: expenseMap,
+    );
+
+    final aggregatedResults = await Isolate.run(() => _computeBudgetInIsolate(payload));
+
+    final budgetMap = {for (final b in activeBudgets) b.syncId: b};
+    final items = <CategoryBudgetUsage>[];
+
+    for (final itemDto in aggregatedResults.items) {
+      final budget = budgetMap[itemDto.syncId];
+      if (budget == null) continue;
+      final cat = catMap[budget.categorySyncId];
+
+      items.add(
+        CategoryBudgetUsage(
+          budget: budget,
+          categoryName: cat?.name ?? 'Tanpa Kategori',
+          categoryIcon: cat?.icon ?? 'category',
+          categoryColor: cat?.colorValue ?? 0xFF5D5CFF,
+          spentAmount: itemDto.spent,
+          limitAmount: itemDto.limit,
+          remainingAmount: itemDto.remaining,
+          percentage: itemDto.percentage,
+          status: itemDto.status,
+        ),
+      );
+    }
+
+    items.sort((a, b) => b.percentage.compareTo(a.percentage));
+
+    return MonthlyBudgetSummary(
+      year: year,
+      month: month,
+      totalBudgetLimit: aggregatedResults.totalLimit,
+      totalBudgetSpent: aggregatedResults.totalSpent,
+      totalBudgetRemaining: aggregatedResults.totalRemaining,
+      totalPercentage: aggregatedResults.totalPercentage,
+      overallStatus: aggregatedResults.overallStatus,
+      items: items,
+    );
   }
 
-  static MonthlyBudgetSummary _computeBudgetAggregation(
-    List<Map<String, dynamic>> rawBudgets,
-    List<Map<String, dynamic>> rawExpenses,
-    Map<String, Map<String, dynamic>> catMap,
+  static MonthlyBudgetSummary _computeBudgetDirect(
+    List<Budget> activeBudgets,
+    List<Transaction> expenses,
+    Map<String, Category> catMap,
     int year,
     int month,
   ) {
-    // 1. Group expense per category
     final expenseMap = <String, double>{};
-    for (final exp in rawExpenses) {
-      final catId = exp['categorySyncId'] as String?;
-      final amount = exp['amount'] as double;
+    for (final exp in expenses) {
+      final catId = exp.categorySyncId;
       if (catId != null) {
-        expenseMap[catId] = (expenseMap[catId] ?? 0.0) + amount;
+        expenseMap[catId] = (expenseMap[catId] ?? 0.0) + exp.amount;
       }
     }
 
@@ -298,12 +321,9 @@ class BudgetRepository {
     double totalSpent = 0.0;
     final items = <CategoryBudgetUsage>[];
 
-    for (final bData in rawBudgets) {
-      final id = bData['id'] as int;
-      final syncId = bData['syncId'] as String;
-      final catSyncId = bData['categorySyncId'] as String;
-      final limit = bData['monthlyLimit'] as double;
-      final spent = expenseMap[catSyncId] ?? 0.0;
+    for (final budget in activeBudgets) {
+      final limit = budget.monthlyLimit;
+      final spent = expenseMap[budget.categorySyncId] ?? 0.0;
       final remaining = limit - spent;
       final percentage = limit > 0 ? (spent / limit) * 100 : 0.0;
 
@@ -319,25 +339,14 @@ class BudgetRepository {
       totalLimit += limit;
       totalSpent += spent;
 
-      final catInfo = catMap[catSyncId];
-      final catName = catInfo?['name'] as String? ?? 'Tanpa Kategori';
-      final catIcon = catInfo?['icon'] as String? ?? 'category';
-      final catColor = catInfo?['color'] as int? ?? 0xFF5D5CFF;
-
-      final budgetObj = Budget()
-        ..id = id
-        ..syncId = syncId
-        ..categorySyncId = catSyncId
-        ..monthlyLimit = limit
-        ..year = bData['year'] as int? ?? year
-        ..month = bData['month'] as int? ?? month
-        ..isActive = bData['isActive'] as bool? ?? true
-        ..createdAt = DateTime.tryParse(bData['createdAt'] as String? ?? '') ?? DateTime.now()
-        ..updatedAt = DateTime.tryParse(bData['updatedAt'] as String? ?? '') ?? DateTime.now();
+      final cat = catMap[budget.categorySyncId];
+      final catName = cat?.name ?? 'Tanpa Kategori';
+      final catIcon = cat?.icon ?? 'category';
+      final catColor = cat?.colorValue ?? 0xFF5D5CFF;
 
       items.add(
         CategoryBudgetUsage(
-          budget: budgetObj,
+          budget: budget,
           categoryName: catName,
           categoryIcon: catIcon,
           categoryColor: catColor,
@@ -350,7 +359,6 @@ class BudgetRepository {
       );
     }
 
-    // Sort items by percentage descending (paling kritis di atas)
     items.sort((a, b) => b.percentage.compareTo(a.percentage));
 
     final totalRemaining = totalLimit - totalSpent;
@@ -376,4 +384,112 @@ class BudgetRepository {
       items: items,
     );
   }
+
+  static _BudgetIsolateResult _computeBudgetInIsolate(_BudgetIsolatePayload payload) {
+    double totalLimit = 0.0;
+    double totalSpent = 0.0;
+    final items = <_CategoryBudgetUsageDto>[];
+
+    for (final entry in payload.budgetLimits.entries) {
+      final syncId = entry.key;
+      final limit = entry.value;
+      final catSyncId = payload.budgetCategoryIds[syncId] ?? '';
+      final spent = payload.expenseByCategory[catSyncId] ?? 0.0;
+      final remaining = limit - spent;
+      final percentage = limit > 0 ? (spent / limit) * 100 : 0.0;
+
+      BudgetStatus status;
+      if (percentage >= 100.0) {
+        status = BudgetStatus.overbudget;
+      } else if (percentage >= 75.0) {
+        status = BudgetStatus.warning;
+      } else {
+        status = BudgetStatus.safe;
+      }
+
+      totalLimit += limit;
+      totalSpent += spent;
+
+      items.add(
+        _CategoryBudgetUsageDto(
+          syncId: syncId,
+          spent: spent,
+          limit: limit,
+          remaining: remaining,
+          percentage: percentage,
+          status: status,
+        ),
+      );
+    }
+
+    final totalRemaining = totalLimit - totalSpent;
+    final totalPercentage = totalLimit > 0 ? (totalSpent / totalLimit) * 100 : 0.0;
+
+    BudgetStatus overallStatus;
+    if (totalPercentage >= 100.0) {
+      overallStatus = BudgetStatus.overbudget;
+    } else if (totalPercentage >= 75.0) {
+      overallStatus = BudgetStatus.warning;
+    } else {
+      overallStatus = BudgetStatus.safe;
+    }
+
+    return _BudgetIsolateResult(
+      totalLimit: totalLimit,
+      totalSpent: totalSpent,
+      totalRemaining: totalRemaining,
+      totalPercentage: totalPercentage,
+      overallStatus: overallStatus,
+      items: items,
+    );
+  }
 }
+
+class _BudgetIsolatePayload {
+  final Map<String, double> budgetLimits;
+  final Map<String, String> budgetCategoryIds;
+  final Map<String, double> expenseByCategory;
+
+  const _BudgetIsolatePayload({
+    required this.budgetLimits,
+    required this.budgetCategoryIds,
+    required this.expenseByCategory,
+  });
+}
+
+class _CategoryBudgetUsageDto {
+  final String syncId;
+  final double spent;
+  final double limit;
+  final double remaining;
+  final double percentage;
+  final BudgetStatus status;
+
+  const _CategoryBudgetUsageDto({
+    required this.syncId,
+    required this.spent,
+    required this.limit,
+    required this.remaining,
+    required this.percentage,
+    required this.status,
+  });
+}
+
+class _BudgetIsolateResult {
+  final double totalLimit;
+  final double totalSpent;
+  final double totalRemaining;
+  final double totalPercentage;
+  final BudgetStatus overallStatus;
+  final List<_CategoryBudgetUsageDto> items;
+
+  const _BudgetIsolateResult({
+    required this.totalLimit,
+    required this.totalSpent,
+    required this.totalRemaining,
+    required this.totalPercentage,
+    required this.overallStatus,
+    required this.items,
+  });
+}
+
