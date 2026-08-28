@@ -78,9 +78,18 @@ final searchResultsProvider =
     return const GlobalSearchResult.empty();
   }
 
+  // 300ms debounce to prevent firing queries and isolates on every keystroke
+  var didCancel = false;
+  ref.onDispose(() => didCancel = true);
+  await Future.delayed(const Duration(milliseconds: 300));
+  if (didCancel) {
+    return const GlobalSearchResult.empty();
+  }
+
   return await repo.search(
     query: filter.query,
     typeFilter: filter.typeFilter,
     dateRangeFilter: filter.dateRangeFilter,
   );
 });
+

@@ -47,77 +47,7 @@ class SearchRepository {
       return const GlobalSearchResult.empty();
     }
 
-    // 1. Fetch data from Isar
-    final allTransactions = await _isar.transactions.where().sortByDateDesc().findAll();
-    final allCategories = await _isar.categorys.where().findAll();
-    final allWallets = await _isar.wallets.where().findAll();
-    final allDebts = await _isar.debts.where().findAll();
-    final allContacts = await _isar.contacts.where().findAll();
-
-    final rawTransactions = allTransactions.map((tx) => {
-      'id': tx.id,
-      'syncId': tx.syncId,
-      'type': tx.type,
-      'amount': tx.amount,
-      'date': tx.date.toIso8601String(),
-      'description': tx.description,
-      'walletSyncId': tx.walletSyncId,
-      'categorySyncId': tx.categorySyncId,
-      'transactionGroupId': tx.transactionGroupId,
-      'debtSyncId': tx.debtSyncId,
-      'createdAt': tx.createdAt.toIso8601String(),
-      'updatedAt': tx.updatedAt.toIso8601String(),
-    }).toList();
-
-    final rawCategories = allCategories.map((c) => {
-      'id': c.id,
-      'syncId': c.syncId,
-      'name': c.name,
-      'type': c.type,
-      'icon': c.icon,
-      'colorValue': c.colorValue,
-      'isActive': c.isActive,
-    }).toList();
-
-    final rawWallets = allWallets.map((w) => {
-      'id': w.id,
-      'syncId': w.syncId,
-      'name': w.name,
-      'balance': w.balance,
-      'isActive': w.isActive,
-      'isGoal': w.isGoal,
-      'targetAmount': w.targetAmount,
-      'targetDate': w.targetDate?.toIso8601String(),
-      'createdAt': w.createdAt.toIso8601String(),
-      'updatedAt': w.updatedAt.toIso8601String(),
-    }).toList();
-
-    final rawDebts = allDebts.map((d) => {
-      'id': d.id,
-      'syncId': d.syncId,
-      'title': d.title,
-      'type': d.type,
-      'contactSyncId': d.contactSyncId,
-      'totalAmount': d.totalAmount,
-      'paidAmount': d.paidAmount,
-      'startDate': d.startDate.toIso8601String(),
-      'dueDate': d.dueDate?.toIso8601String(),
-      'notes': d.notes,
-      'isActive': d.isActive,
-      'createdAt': d.createdAt.toIso8601String(),
-      'updatedAt': d.updatedAt.toIso8601String(),
-    }).toList();
-
-    final rawContacts = allContacts.map((c) => {
-      'id': c.id,
-      'syncId': c.syncId,
-      'name': c.name,
-      'phoneNumber': c.phoneNumber,
-      'email': c.email,
-      'isActive': c.isActive,
-    }).toList();
-
-    // Calculate Date Range
+    // 1. Calculate Date Range threshold
     final now = DateTime.now();
     DateTime? minDate;
     switch (dateRangeFilter) {
@@ -135,147 +65,172 @@ class SearchRepository {
         break;
     }
 
-    final parsedNumber = double.tryParse(cleanQuery.replaceAll(RegExp(r'[^0-9]'), ''));
-    final minDateIso = minDate?.toIso8601String();
+    // 2. Optimized Database-Level Query: Transactions
+    List<Transaction> transactions = [];
+    if (typeFilter != SearchTypeFilter.debt) {
+      QueryBuilder<Transaction, Transaction, QAfterFilterCondition> txQuery;
 
-    // Check if we should compute directly or via Isolate (AGENTS.md §5)
-    if (kIsWeb || allTransactions.length < 100) {
-      return _filterAndMatch(
+      if (minDate != null) {
+        txQuery = _isar.transactions.filter().dateGreaterThan(minDate, include: true);
+      } else {
+        txQuery = _isar.transactions.filter().idGreaterThan(0);
+      }
+
+      // Apply type filter directly at database level
+      if (typeFilter == SearchTypeFilter.expense) {
+        txQuery = txQuery.and().typeEqualTo('EXPENSE');
+      } else if (typeFilter == SearchTypeFilter.income) {
+        txQuery = txQuery.and().typeEqualTo('INCOME');
+      } else if (typeFilter == SearchTypeFilter.transfer) {
+        txQuery = txQuery.and().group(
+              (q) => q.typeEqualTo('TRANSFER_IN').or().typeEqualTo('TRANSFER_OUT'),
+            );
+      }
+
+      transactions = await txQuery.sortByDateDesc().findAll();
+    }
+
+    // 3. Optimized Database-Level Query: Debts
+    List<Debt> debts = [];
+    if (typeFilter == SearchTypeFilter.all || typeFilter == SearchTypeFilter.debt) {
+      QueryBuilder<Debt, Debt, QAfterFilterCondition> debtQuery =
+          _isar.debts.filter().isActiveEqualTo(true);
+
+      if (minDate != null) {
+        debtQuery = debtQuery.and().startDateGreaterThan(minDate, include: true);
+      }
+
+      debts = await debtQuery.sortByStartDateDesc().findAll();
+    }
+
+    // 4. Fetch Active Master Records
+    final categories = await _isar.categorys.where().findAll();
+    final wallets = await _isar.wallets.filter().isActiveEqualTo(true).findAll();
+    final contacts = await _isar.contacts.where().findAll();
+
+    final catMap = {for (final c in categories) c.syncId: c};
+    final walletMap = {for (final w in wallets) w.syncId: w};
+    final contactMap = {for (final c in contacts) c.syncId: c};
+    final txMap = {for (final tx in transactions) tx.syncId: tx};
+    final debtMap = {for (final d in debts) d.syncId: d};
+
+    final parsedNumber = double.tryParse(cleanQuery.replaceAll(RegExp(r'[^0-9]'), ''));
+
+    // 5. In-Memory Direct Matching (for small datasets < 100 or Web)
+    if (kIsWeb || transactions.length < 100) {
+      return _matchInMemory(
         cleanQuery: cleanQuery,
         parsedNumber: parsedNumber,
         typeFilter: typeFilter,
-        minDateIso: minDateIso,
-        rawTransactions: rawTransactions,
-        rawDebts: rawDebts,
-        rawWallets: rawWallets,
-        rawCategories: rawCategories,
-        rawContacts: rawContacts,
+        transactions: transactions,
+        debts: debts,
+        wallets: wallets,
+        catMap: catMap,
+        walletMap: walletMap,
+        contactMap: contactMap,
       );
     }
 
-    // For larger datasets, run matching off the main thread (Isolate.run)
-    return await Isolate.run(() {
-      return _filterAndMatch(
-        cleanQuery: cleanQuery,
-        parsedNumber: parsedNumber,
-        typeFilter: typeFilter,
-        minDateIso: minDateIso,
-        rawTransactions: rawTransactions,
-        rawDebts: rawDebts,
-        rawWallets: rawWallets,
-        rawCategories: rawCategories,
-        rawContacts: rawContacts,
-      );
-    });
+    // 6. Zero-Allocation Lightweight Isolate Processing for large datasets
+    final payload = _SearchIsolatePayload(
+      cleanQuery: cleanQuery,
+      parsedNumber: parsedNumber,
+      typeFilter: typeFilter,
+      txItems: [
+        for (final tx in transactions)
+          _TxSearchDto(
+            syncId: tx.syncId,
+            description: tx.description?.toLowerCase(),
+            amount: tx.amount,
+            type: tx.type,
+            walletSyncId: tx.walletSyncId,
+            categorySyncId: tx.categorySyncId,
+          ),
+      ],
+      debtItems: [
+        for (final d in debts)
+          _DebtSearchDto(
+            syncId: d.syncId,
+            title: d.title.toLowerCase(),
+            notes: d.notes?.toLowerCase(),
+            totalAmount: d.totalAmount,
+            paidAmount: d.paidAmount,
+            contactSyncId: d.contactSyncId,
+          ),
+      ],
+      goalItems: [
+        for (final w in wallets)
+          _GoalSearchDto(
+            syncId: w.syncId,
+            name: w.name.toLowerCase(),
+            balance: w.balance,
+            targetAmount: w.targetAmount,
+          ),
+      ],
+      walletNames: {for (final w in wallets) w.syncId: w.name.toLowerCase()},
+      categoryNames: {for (final c in categories) c.syncId: c.name.toLowerCase()},
+      contactNames: {for (final c in contacts) c.syncId: c.name.toLowerCase()},
+    );
+
+    final matchResult = await Isolate.run(() => _executeSearchInIsolate(payload));
+
+    final enrichedTx = matchResult.matchedTxSyncIds
+        .map((id) {
+          final tx = txMap[id];
+          if (tx == null) return null;
+          return EnrichedTransactionItem(
+            transaction: tx,
+            wallet: walletMap[tx.walletSyncId],
+            category: catMap[tx.categorySyncId ?? ''],
+          );
+        })
+        .whereType<EnrichedTransactionItem>()
+        .toList();
+
+    final enrichedDebts = matchResult.matchedDebtSyncIds
+        .map((id) {
+          final debt = debtMap[id];
+          if (debt == null) return null;
+          return EnrichedDebtItem(
+            debt: debt,
+            contact: contactMap[debt.contactSyncId],
+          );
+        })
+        .whereType<EnrichedDebtItem>()
+        .toList();
+
+    final matchedGoals = matchResult.matchedGoalSyncIds
+        .map((id) => walletMap[id])
+        .whereType<Wallet>()
+        .toList();
+
+    return GlobalSearchResult(
+      query: cleanQuery,
+      transactions: enrichedTx,
+      debts: enrichedDebts,
+      goals: matchedGoals,
+      totalIncome: matchResult.totalIncome,
+      totalExpense: matchResult.totalExpense,
+    );
   }
 
-  static GlobalSearchResult _filterAndMatch({
+  static GlobalSearchResult _matchInMemory({
     required String cleanQuery,
     required double? parsedNumber,
     required SearchTypeFilter typeFilter,
-    required String? minDateIso,
-    required List<Map<String, dynamic>> rawTransactions,
-    required List<Map<String, dynamic>> rawDebts,
-    required List<Map<String, dynamic>> rawWallets,
-    required List<Map<String, dynamic>> rawCategories,
-    required List<Map<String, dynamic>> rawContacts,
+    required List<Transaction> transactions,
+    required List<Debt> debts,
+    required List<Wallet> wallets,
+    required Map<String, Category> catMap,
+    required Map<String, Wallet> walletMap,
+    required Map<String, Contact> contactMap,
   }) {
-    final now = DateTime.now();
-    final minDate = minDateIso != null ? DateTime.parse(minDateIso) : null;
-
-    final catMap = <String, Category>{};
-    for (final cData in rawCategories) {
-      final cat = Category()
-        ..id = cData['id'] as int? ?? 0
-        ..syncId = cData['syncId'] as String
-        ..name = cData['name'] as String
-        ..type = cData['type'] as String
-        ..icon = cData['icon'] as String
-        ..colorValue = cData['colorValue'] as int? ?? 0xFF5D5CFF
-        ..isActive = cData['isActive'] as bool? ?? true;
-      catMap[cat.syncId] = cat;
-    }
-
-    final walletMap = <String, Wallet>{};
-    final allWallets = <Wallet>[];
-    for (final wData in rawWallets) {
-      final wallet = Wallet()
-        ..id = wData['id'] as int? ?? 0
-        ..syncId = wData['syncId'] as String
-        ..name = wData['name'] as String
-        ..balance = wData['balance'] as double? ?? 0.0
-        ..isActive = wData['isActive'] as bool? ?? true
-        ..isGoal = wData['isGoal'] as bool? ?? false
-        ..targetAmount = wData['targetAmount'] as double?
-        ..targetDate = wData['targetDate'] != null ? DateTime.tryParse(wData['targetDate'] as String) : null
-        ..createdAt = DateTime.tryParse(wData['createdAt'] as String? ?? '') ?? now
-        ..updatedAt = DateTime.tryParse(wData['updatedAt'] as String? ?? '') ?? now;
-      walletMap[wallet.syncId] = wallet;
-      allWallets.add(wallet);
-    }
-
-    final contactMap = <String, Contact>{};
-    for (final cData in rawContacts) {
-      final contact = Contact()
-        ..id = cData['id'] as int? ?? 0
-        ..syncId = cData['syncId'] as String
-        ..name = cData['name'] as String
-        ..phoneNumber = cData['phoneNumber'] as String?
-        ..email = cData['email'] as String?
-        ..isActive = cData['isActive'] as bool? ?? true;
-      contactMap[contact.syncId] = contact;
-    }
-
-    final allTransactions = rawTransactions.map((txData) {
-      return Transaction()
-        ..id = txData['id'] as int? ?? 0
-        ..syncId = txData['syncId'] as String
-        ..type = txData['type'] as String
-        ..amount = txData['amount'] as double? ?? 0.0
-        ..date = DateTime.tryParse(txData['date'] as String? ?? '') ?? now
-        ..description = txData['description'] as String?
-        ..walletSyncId = txData['walletSyncId'] as String
-        ..categorySyncId = txData['categorySyncId'] as String?
-        ..transactionGroupId = txData['transactionGroupId'] as String?
-        ..debtSyncId = txData['debtSyncId'] as String?
-        ..createdAt = DateTime.tryParse(txData['createdAt'] as String? ?? '') ?? now
-        ..updatedAt = DateTime.tryParse(txData['updatedAt'] as String? ?? '') ?? now;
-    }).toList();
-
-    final allDebts = rawDebts.map((dData) {
-      return Debt()
-        ..id = dData['id'] as int? ?? 0
-        ..syncId = dData['syncId'] as String
-        ..title = dData['title'] as String
-        ..type = dData['type'] as String
-        ..contactSyncId = dData['contactSyncId'] as String
-        ..totalAmount = dData['totalAmount'] as double? ?? 0.0
-        ..paidAmount = dData['paidAmount'] as double? ?? 0.0
-        ..startDate = DateTime.tryParse(dData['startDate'] as String? ?? '') ?? now
-        ..dueDate = dData['dueDate'] != null ? DateTime.tryParse(dData['dueDate'] as String) : null
-        ..notes = dData['notes'] as String?
-        ..isActive = dData['isActive'] as bool? ?? true
-        ..createdAt = DateTime.tryParse(dData['createdAt'] as String? ?? '') ?? now
-        ..updatedAt = DateTime.tryParse(dData['updatedAt'] as String? ?? '') ?? now;
-    }).toList();
-
     final matchedTx = <EnrichedTransactionItem>[];
     double totalIncome = 0.0;
     double totalExpense = 0.0;
 
-    // Filter Transactions
     if (typeFilter != SearchTypeFilter.debt) {
-      for (final tx in allTransactions) {
-        if (minDate != null && tx.date.isBefore(minDate)) continue;
-
-        // Type filter check
-        if (typeFilter == SearchTypeFilter.expense && tx.type != 'EXPENSE') continue;
-        if (typeFilter == SearchTypeFilter.income && tx.type != 'INCOME') continue;
-        if (typeFilter == SearchTypeFilter.transfer &&
-            !tx.type.contains('TRANSFER')) {
-          continue;
-        }
-
+      for (final tx in transactions) {
         final wallet = walletMap[tx.walletSyncId];
         final category = catMap[tx.categorySyncId ?? ''];
 
@@ -301,13 +256,9 @@ class SearchRepository {
       }
     }
 
-    // Filter Debts
     final matchedDebts = <EnrichedDebtItem>[];
     if (typeFilter == SearchTypeFilter.all || typeFilter == SearchTypeFilter.debt) {
-      for (final debt in allDebts) {
-        if (!debt.isActive) continue;
-        if (minDate != null && debt.startDate.isBefore(minDate)) continue;
-
+      for (final debt in debts) {
         final contact = contactMap[debt.contactSyncId];
         final titleMatch = debt.title.toLowerCase().contains(cleanQuery);
         final notesMatch = debt.notes?.toLowerCase().contains(cleanQuery) ?? false;
@@ -326,11 +277,9 @@ class SearchRepository {
       }
     }
 
-    // Filter Goals & Wallets
     final matchedGoals = <Wallet>[];
     if (typeFilter == SearchTypeFilter.all) {
-      for (final w in allWallets) {
-        if (!w.isActive) continue;
+      for (final w in wallets) {
         final nameMatch = w.name.toLowerCase().contains(cleanQuery);
         final numberMatch = parsedNumber != null &&
             (w.balance == parsedNumber ||
@@ -351,4 +300,164 @@ class SearchRepository {
       totalExpense: totalExpense,
     );
   }
+
+  static _SearchIsolateResult _executeSearchInIsolate(_SearchIsolatePayload payload) {
+    final matchedTxSyncIds = <String>[];
+    double totalIncome = 0.0;
+    double totalExpense = 0.0;
+
+    if (payload.typeFilter != SearchTypeFilter.debt) {
+      for (final tx in payload.txItems) {
+        final walletName = payload.walletNames[tx.walletSyncId] ?? '';
+        final categoryName = payload.categoryNames[tx.categorySyncId ?? ''] ?? '';
+
+        final descMatch = tx.description?.contains(payload.cleanQuery) ?? false;
+        final catMatch = categoryName.contains(payload.cleanQuery);
+        final walletMatch = walletName.contains(payload.cleanQuery);
+        final numberMatch = payload.parsedNumber != null &&
+            (tx.amount == payload.parsedNumber ||
+                tx.amount.toString().contains(payload.cleanQuery));
+
+        if (descMatch || catMatch || walletMatch || numberMatch) {
+          matchedTxSyncIds.add(tx.syncId);
+
+          if (tx.type == 'INCOME') {
+            totalIncome += tx.amount;
+          } else if (tx.type == 'EXPENSE') {
+            totalExpense += tx.amount;
+          }
+        }
+      }
+    }
+
+    final matchedDebtSyncIds = <String>[];
+    if (payload.typeFilter == SearchTypeFilter.all || payload.typeFilter == SearchTypeFilter.debt) {
+      for (final debt in payload.debtItems) {
+        final contactName = payload.contactNames[debt.contactSyncId] ?? '';
+        final titleMatch = debt.title.contains(payload.cleanQuery);
+        final notesMatch = debt.notes?.contains(payload.cleanQuery) ?? false;
+        final contactMatch = contactName.contains(payload.cleanQuery);
+        final numberMatch = payload.parsedNumber != null &&
+            (debt.totalAmount == payload.parsedNumber ||
+                debt.paidAmount == payload.parsedNumber ||
+                debt.totalAmount.toString().contains(payload.cleanQuery));
+
+        if (titleMatch || notesMatch || contactMatch || numberMatch) {
+          matchedDebtSyncIds.add(debt.syncId);
+        }
+      }
+    }
+
+    final matchedGoalSyncIds = <String>[];
+    if (payload.typeFilter == SearchTypeFilter.all) {
+      for (final goal in payload.goalItems) {
+        final nameMatch = goal.name.contains(payload.cleanQuery);
+        final numberMatch = payload.parsedNumber != null &&
+            (goal.balance == payload.parsedNumber ||
+                (goal.targetAmount != null && goal.targetAmount == payload.parsedNumber));
+
+        if (nameMatch || numberMatch) {
+          matchedGoalSyncIds.add(goal.syncId);
+        }
+      }
+    }
+
+    return _SearchIsolateResult(
+      matchedTxSyncIds: matchedTxSyncIds,
+      matchedDebtSyncIds: matchedDebtSyncIds,
+      matchedGoalSyncIds: matchedGoalSyncIds,
+      totalIncome: totalIncome,
+      totalExpense: totalExpense,
+    );
+  }
+}
+
+class _TxSearchDto {
+  final String syncId;
+  final String? description;
+  final double amount;
+  final String type;
+  final String walletSyncId;
+  final String? categorySyncId;
+
+  const _TxSearchDto({
+    required this.syncId,
+    this.description,
+    required this.amount,
+    required this.type,
+    required this.walletSyncId,
+    this.categorySyncId,
+  });
+}
+
+class _DebtSearchDto {
+  final String syncId;
+  final String title;
+  final String? notes;
+  final double totalAmount;
+  final double paidAmount;
+  final String contactSyncId;
+
+  const _DebtSearchDto({
+    required this.syncId,
+    required this.title,
+    this.notes,
+    required this.totalAmount,
+    required this.paidAmount,
+    required this.contactSyncId,
+  });
+}
+
+class _GoalSearchDto {
+  final String syncId;
+  final String name;
+  final double balance;
+  final double? targetAmount;
+
+  const _GoalSearchDto({
+    required this.syncId,
+    required this.name,
+    required this.balance,
+    this.targetAmount,
+  });
+}
+
+class _SearchIsolatePayload {
+  final String cleanQuery;
+  final double? parsedNumber;
+  final SearchTypeFilter typeFilter;
+  final List<_TxSearchDto> txItems;
+  final List<_DebtSearchDto> debtItems;
+  final List<_GoalSearchDto> goalItems;
+  final Map<String, String> walletNames;
+  final Map<String, String> categoryNames;
+  final Map<String, String> contactNames;
+
+  const _SearchIsolatePayload({
+    required this.cleanQuery,
+    required this.parsedNumber,
+    required this.typeFilter,
+    required this.txItems,
+    required this.debtItems,
+    required this.goalItems,
+    required this.walletNames,
+    required this.categoryNames,
+    required this.contactNames,
+  });
+}
+
+class _SearchIsolateResult {
+  final List<String> matchedTxSyncIds;
+  final List<String> matchedDebtSyncIds;
+  final List<String> matchedGoalSyncIds;
+  final double totalIncome;
+  final double totalExpense;
+
+  const _SearchIsolateResult({
+    required this.matchedTxSyncIds,
+    required this.matchedDebtSyncIds,
+    required this.matchedGoalSyncIds,
+    required this.totalIncome,
+    required this.totalExpense,
+  });
 }
