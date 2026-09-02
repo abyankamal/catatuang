@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../backup/data/backup_restore_service.dart';
 import '../../dashboard/application/dashboard_providers.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -276,6 +277,76 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _handleExportBackup() async {
+    setState(() => _isLoading = true);
+    try {
+      final service = ref.read(backupRestoreServiceProvider);
+      final result = await service.exportDatabase();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: result.isSuccess ? AppColors.income : AppColors.expense,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleRestoreBackup() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.primary, size: 28),
+            SizedBox(width: 8),
+            Expanded(child: Text('Pulihkan Database?')),
+          ],
+        ),
+        content: const Text(
+          'Memulihkan file cadangan akan menimpa seluruh data keuangan aktif Anda saat ini dengan data dari file cadangan yang dipilih.\n\nPastikan Anda memilih file (.isar) yang valid. Lanjutkan?',
+          style: TextStyle(height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Pilih File Cadangan', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final service = ref.read(backupRestoreServiceProvider);
+      final result = await service.pickAndRestoreDatabase();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: result.isSuccess ? AppColors.income : AppColors.expense,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -858,6 +929,89 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             onChanged: (val) {
                               ref.read(settingsControllerProvider.notifier).setDebtReminderEnabled(val);
                             },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Section Cadangan & Pemulihan Data
+                  Material(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withAlpha(20),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.cloud_sync_rounded, color: AppColors.primary, size: 22),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Cadangan & Pemulihan Data',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.secondary,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Simpan atau pulihkan file database offline (.isar)',
+                                      style: GoogleFonts.hankenGrotesk(fontSize: 12, color: Colors.grey.shade600),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _isLoading ? null : _handleExportBackup,
+                                  icon: const Icon(Icons.upload_file_rounded, size: 18),
+                                  label: const Text('Cadangkan Data'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primary,
+                                    side: const BorderSide(color: AppColors.primary),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _isLoading ? null : _handleRestoreBackup,
+                                  icon: const Icon(Icons.file_download_rounded, size: 18, color: Colors.white),
+                                  label: const Text('Pulihkan Data', style: TextStyle(color: Colors.white)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
