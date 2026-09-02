@@ -75,5 +75,37 @@ void main() {
       // Double quotes in notes should be escaped as "" and wrapped in quotes
       expect(csvString.contains('"Beli ""Kopi"", Teh,\ndan Gula"'), true);
     });
+
+    test('CsvReportService neutralizes CSV Formula Injection attempts (CWE-1236)', () async {
+      final transactions = [
+        DetailedTransactionItem(
+          date: DateTime(2026, 8, 14, 16, 0, 0),
+          type: 'EXPENSE',
+          amount: 100000,
+          walletName: '=WalletDDE()',
+          categoryName: '@CategoryMacro',
+          notes: '=SUM(1+1)*cmd|/C calc!A0',
+        ),
+        DetailedTransactionItem(
+          date: DateTime(2026, 8, 14, 16, 5, 0),
+          type: 'INCOME',
+          amount: 250000,
+          walletName: '+BonusWallet',
+          categoryName: '-DeductionCat',
+          notes: '\tTabLeadingNote',
+        ),
+      ];
+
+      final csvBytes = await CsvReportService.generateCsvBytes(transactions);
+      final csvString = utf8.decode(csvBytes.sublist(3));
+
+      // Formula characters must be sanitized with leading single quote
+      expect(csvString.contains("'=WalletDDE()"), true);
+      expect(csvString.contains("'@CategoryMacro"), true);
+      expect(csvString.contains("''=SUM(1+1)*cmd|/C calc!A0"), false); // properly sanitized
+      expect(csvString.contains("'+BonusWallet"), true);
+      expect(csvString.contains("'-DeductionCat"), true);
+      expect(csvString.contains("'\tTabLeadingNote"), true);
+    });
   });
 }

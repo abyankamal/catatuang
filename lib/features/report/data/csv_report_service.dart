@@ -91,15 +91,31 @@ class CsvReportService {
     }
   }
 
-  /// Escape string cell according to RFC 4180 rules
+  /// Escape string cell according to RFC 4180 rules & sanitize against CSV Formula Injection (CWE-1236)
   static String _escapeCsvCell(String input) {
-    if (input.contains(',') ||
-        input.contains('"') ||
-        input.contains('\n') ||
-        input.contains('\r')) {
-      final escaped = input.replaceAll('"', '""');
+    var sanitized = input;
+
+    // Mitigasi CSV Formula Injection (CWE-1236)
+    // Cegah eksekusi formula di spreadsheet jika cell diawali =, +, -, @, \t, atau \r
+    if (sanitized.isNotEmpty) {
+      final firstChar = sanitized[0];
+      if (firstChar == '=' ||
+          firstChar == '+' ||
+          firstChar == '-' ||
+          firstChar == '@' ||
+          firstChar == '\t' ||
+          firstChar == '\r') {
+        sanitized = "'$sanitized";
+      }
+    }
+
+    if (sanitized.contains(',') ||
+        sanitized.contains('"') ||
+        sanitized.contains('\n') ||
+        sanitized.contains('\r')) {
+      final escaped = sanitized.replaceAll('"', '""');
       return '"$escaped"';
     }
-    return input;
+    return sanitized;
   }
 }
