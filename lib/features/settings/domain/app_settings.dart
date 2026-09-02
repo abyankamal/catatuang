@@ -20,6 +20,10 @@ class AppSettings {
 
   bool isDebtReminderEnabled = true;   // Flag status pengingat notifikasi utang & piutang
 
+  bool isPinEnabled = false;           // Flag status penguncian aplikasi dengan PIN 6-digit
+  String? pinHash;                     // Hash SHA-256 dari PIN yang tersimpan
+  String? pinSalt;                     // Salt acak untuk pengamanan hash PIN
+
   late DateTime createdAt;
   late DateTime updatedAt;
 }

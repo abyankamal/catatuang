@@ -37,28 +37,43 @@ const AppSettingsSchema = CollectionSchema(
       name: r'isDebtReminderEnabled',
       type: IsarType.bool,
     ),
-    r'isPrivacyScreenEnabled': PropertySchema(
+    r'isPinEnabled': PropertySchema(
       id: 4,
+      name: r'isPinEnabled',
+      type: IsarType.bool,
+    ),
+    r'isPrivacyScreenEnabled': PropertySchema(
+      id: 5,
       name: r'isPrivacyScreenEnabled',
       type: IsarType.bool,
     ),
     r'lockedUntil': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'lockedUntil',
       type: IsarType.dateTime,
     ),
+    r'pinHash': PropertySchema(
+      id: 7,
+      name: r'pinHash',
+      type: IsarType.string,
+    ),
+    r'pinSalt': PropertySchema(
+      id: 8,
+      name: r'pinSalt',
+      type: IsarType.string,
+    ),
     r'syncId': PropertySchema(
-      id: 6,
+      id: 9,
       name: r'syncId',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 7,
+      id: 10,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'userName': PropertySchema(
-      id: 8,
+      id: 11,
       name: r'userName',
       type: IsarType.string,
     )
@@ -103,6 +118,18 @@ int _appSettingsEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  {
+    final value = object.pinHash;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.pinSalt;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.syncId.length * 3;
   {
     final value = object.userName;
@@ -123,11 +150,14 @@ void _appSettingsSerialize(
   writer.writeDateTime(offsets[1], object.createdAt);
   writer.writeBool(offsets[2], object.hasCompletedOnboarding);
   writer.writeBool(offsets[3], object.isDebtReminderEnabled);
-  writer.writeBool(offsets[4], object.isPrivacyScreenEnabled);
-  writer.writeDateTime(offsets[5], object.lockedUntil);
-  writer.writeString(offsets[6], object.syncId);
-  writer.writeDateTime(offsets[7], object.updatedAt);
-  writer.writeString(offsets[8], object.userName);
+  writer.writeBool(offsets[4], object.isPinEnabled);
+  writer.writeBool(offsets[5], object.isPrivacyScreenEnabled);
+  writer.writeDateTime(offsets[6], object.lockedUntil);
+  writer.writeString(offsets[7], object.pinHash);
+  writer.writeString(offsets[8], object.pinSalt);
+  writer.writeString(offsets[9], object.syncId);
+  writer.writeDateTime(offsets[10], object.updatedAt);
+  writer.writeString(offsets[11], object.userName);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -142,11 +172,14 @@ AppSettings _appSettingsDeserialize(
   object.hasCompletedOnboarding = reader.readBool(offsets[2]);
   object.id = id;
   object.isDebtReminderEnabled = reader.readBool(offsets[3]);
-  object.isPrivacyScreenEnabled = reader.readBool(offsets[4]);
-  object.lockedUntil = reader.readDateTimeOrNull(offsets[5]);
-  object.syncId = reader.readString(offsets[6]);
-  object.updatedAt = reader.readDateTime(offsets[7]);
-  object.userName = reader.readStringOrNull(offsets[8]);
+  object.isPinEnabled = reader.readBool(offsets[4]);
+  object.isPrivacyScreenEnabled = reader.readBool(offsets[5]);
+  object.lockedUntil = reader.readDateTimeOrNull(offsets[6]);
+  object.pinHash = reader.readStringOrNull(offsets[7]);
+  object.pinSalt = reader.readStringOrNull(offsets[8]);
+  object.syncId = reader.readString(offsets[9]);
+  object.updatedAt = reader.readDateTime(offsets[10]);
+  object.userName = reader.readStringOrNull(offsets[11]);
   return object;
 }
 
@@ -168,12 +201,18 @@ P _appSettingsDeserializeProp<P>(
     case 4:
       return (reader.readBool(offset)) as P;
     case 5:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 6:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 7:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 8:
+      return (reader.readStringOrNull(offset)) as P;
+    case 9:
+      return (reader.readString(offset)) as P;
+    case 10:
+      return (reader.readDateTime(offset)) as P;
+    case 11:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -657,6 +696,16 @@ extension AppSettingsQueryFilter
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      isPinEnabledEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isPinEnabled',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
       isPrivacyScreenEnabledEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -736,6 +785,310 @@ extension AppSettingsQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      pinHashIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'pinHash',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      pinHashIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'pinHash',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition> pinHashEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'pinHash',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      pinHashGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'pinHash',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition> pinHashLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'pinHash',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition> pinHashBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'pinHash',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      pinHashStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'pinHash',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition> pinHashEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'pinHash',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition> pinHashContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'pinHash',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition> pinHashMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'pinHash',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      pinHashIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'pinHash',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      pinHashIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'pinHash',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      pinSaltIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'pinSalt',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      pinSaltIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'pinSalt',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition> pinSaltEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'pinSalt',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      pinSaltGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'pinSalt',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition> pinSaltLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'pinSalt',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition> pinSaltBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'pinSalt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      pinSaltStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'pinSalt',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition> pinSaltEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'pinSalt',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition> pinSaltContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'pinSalt',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition> pinSaltMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'pinSalt',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      pinSaltIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'pinSalt',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      pinSaltIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'pinSalt',
+        value: '',
       ));
     });
   }
@@ -1144,6 +1497,19 @@ extension AppSettingsQuerySortBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByIsPinEnabled() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPinEnabled', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByIsPinEnabledDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPinEnabled', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       sortByIsPrivacyScreenEnabled() {
     return QueryBuilder.apply(this, (query) {
@@ -1167,6 +1533,30 @@ extension AppSettingsQuerySortBy
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByLockedUntilDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lockedUntil', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByPinHash() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pinHash', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByPinHashDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pinHash', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByPinSalt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pinSalt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByPinSaltDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pinSalt', Sort.desc);
     });
   }
 
@@ -1273,6 +1663,19 @@ extension AppSettingsQuerySortThenBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByIsPinEnabled() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPinEnabled', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByIsPinEnabledDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPinEnabled', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       thenByIsPrivacyScreenEnabled() {
     return QueryBuilder.apply(this, (query) {
@@ -1296,6 +1699,30 @@ extension AppSettingsQuerySortThenBy
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByLockedUntilDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lockedUntil', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByPinHash() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pinHash', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByPinHashDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pinHash', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByPinSalt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pinSalt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByPinSaltDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pinSalt', Sort.desc);
     });
   }
 
@@ -1365,6 +1792,12 @@ extension AppSettingsQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByIsPinEnabled() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isPinEnabled');
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QDistinct>
       distinctByIsPrivacyScreenEnabled() {
     return QueryBuilder.apply(this, (query) {
@@ -1375,6 +1808,20 @@ extension AppSettingsQueryWhereDistinct
   QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByLockedUntil() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'lockedUntil');
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByPinHash(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'pinHash', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByPinSalt(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'pinSalt', caseSensitive: caseSensitive);
     });
   }
 
@@ -1433,6 +1880,12 @@ extension AppSettingsQueryProperty
     });
   }
 
+  QueryBuilder<AppSettings, bool, QQueryOperations> isPinEnabledProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isPinEnabled');
+    });
+  }
+
   QueryBuilder<AppSettings, bool, QQueryOperations>
       isPrivacyScreenEnabledProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -1443,6 +1896,18 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, DateTime?, QQueryOperations> lockedUntilProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'lockedUntil');
+    });
+  }
+
+  QueryBuilder<AppSettings, String?, QQueryOperations> pinHashProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'pinHash');
+    });
+  }
+
+  QueryBuilder<AppSettings, String?, QQueryOperations> pinSaltProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'pinSalt');
     });
   }
 

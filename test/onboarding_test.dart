@@ -56,6 +56,19 @@ class FakeAppSettingsRepository implements AppSettingsRepository {
   }
 
   @override
+  Future<void> setPin(String pin) async {
+    settings.isPinEnabled = true;
+  }
+
+  @override
+  Future<void> disablePin() async {
+    settings.isPinEnabled = false;
+  }
+
+  @override
+  Future<bool> verifyPin(String enteredPin) async => true;
+
+  @override
   Future<void> clearAllData() async {}
 }
 

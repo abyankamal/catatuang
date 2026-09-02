@@ -3,6 +3,7 @@ import 'package:isar/isar.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/database_provider.dart';
+import '../../../core/utils/pin_security_helper.dart';
 import '../domain/app_settings.dart';
 
 final appSettingsRepositoryProvider = Provider<AppSettingsRepository>((ref) {
@@ -118,6 +119,53 @@ class AppSettingsRepository {
     await _isar.writeTxn(() async {
       await _isar.appSettings.put(settings);
     });
+  }
+
+  /// Setel PIN baru 6-digit dengan salt dan hash SHA-256
+  Future<void> setPin(String pin) async {
+    if (pin.length != 6 || int.tryParse(pin) == null) {
+      throw ArgumentError('PIN harus terdiri dari 6 digit angka.');
+    }
+
+    final salt = PinSecurityHelper.generateSalt();
+    final hash = PinSecurityHelper.hashPin(pin, salt);
+
+    final settings = await getOrInitSettings();
+    settings.isPinEnabled = true;
+    settings.pinSalt = salt;
+    settings.pinHash = hash;
+    settings.updatedAt = DateTime.now();
+
+    await _isar.writeTxn(() async {
+      await _isar.appSettings.put(settings);
+    });
+  }
+
+  /// Nonaktifkan penguncian PIN
+  Future<void> disablePin() async {
+    final settings = await getOrInitSettings();
+    settings.isPinEnabled = false;
+    settings.pinHash = null;
+    settings.pinSalt = null;
+    settings.updatedAt = DateTime.now();
+
+    await _isar.writeTxn(() async {
+      await _isar.appSettings.put(settings);
+    });
+  }
+
+  /// Verifikasi PIN yang dimasukkan
+  Future<bool> verifyPin(String enteredPin) async {
+    final settings = await getOrInitSettings();
+    if (!settings.isPinEnabled || settings.pinHash == null || settings.pinSalt == null) {
+      return true; // Jika PIN tidak aktif, anggap valid
+    }
+
+    return PinSecurityHelper.verifyPin(
+      enteredPin: enteredPin,
+      storedHash: settings.pinHash!,
+      storedSalt: settings.pinSalt!,
+    );
   }
 
   /// Reset/hapus seluruh isi database Isar secara instan

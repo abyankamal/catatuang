@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../auth/presentation/pin_lock_screen.dart';
 import '../../backup/data/backup_restore_service.dart';
 import '../../dashboard/application/dashboard_providers.dart';
 
@@ -930,6 +931,111 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ref.read(settingsControllerProvider.notifier).setDebtReminderEnabled(val);
                             },
                           ),
+                          const SizedBox(height: 16),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            activeThumbColor: AppColors.primary,
+                            secondary: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withAlpha(20),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.pin_outlined, color: Colors.blue),
+                            ),
+                            title: Text(
+                              'Kunci Aplikasi (PIN 6-Digit)',
+                              style: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                            ),
+                            subtitle: Text(
+                              settings?.isPinEnabled == true
+                                  ? 'Aplikasi terkunci dengan keamanan PIN'
+                                  : 'Amankan aplikasi dengan PIN 6-digit',
+                              style: GoogleFonts.hankenGrotesk(),
+                            ),
+                            value: settings?.isPinEnabled ?? false,
+                            onChanged: (val) {
+                              if (val) {
+                                // Aktifkan PIN: Buka layar Buat PIN
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    fullscreenDialog: true,
+                                    builder: (context) => PinLockScreen(
+                                      mode: PinLockMode.create,
+                                      onCancel: () => Navigator.pop(context),
+                                      onSuccess: () {
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('PIN 6-digit berhasil diaktifkan.'),
+                                            backgroundColor: AppColors.income,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                // Nonaktifkan PIN: Minta verifikasi PIN saat ini terlebih dahulu
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    fullscreenDialog: true,
+                                    builder: (context) => PinLockScreen(
+                                      mode: PinLockMode.unlock,
+                                      onCancel: () => Navigator.pop(context),
+                                      onSuccess: () async {
+                                        await ref.read(settingsControllerProvider.notifier).disablePin();
+                                        if (context.mounted) {
+                                          Navigator.pop(context);
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Kunci PIN dinonaktifkan.'),
+                                              backgroundColor: AppColors.income,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                          if (settings?.isPinEnabled == true) ...[
+                            const SizedBox(height: 8),
+                            ListTile(
+                              contentPadding: const EdgeInsets.only(left: 56),
+                              title: Text(
+                                'Ubah PIN 6-Digit',
+                                style: GoogleFonts.manrope(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.primary, size: 20),
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    fullscreenDialog: true,
+                                    builder: (context) => PinLockScreen(
+                                      mode: PinLockMode.change,
+                                      onCancel: () => Navigator.pop(context),
+                                      onSuccess: () {
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('PIN 6-digit berhasil diperbarui.'),
+                                            backgroundColor: AppColors.income,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ],
                       ),
                     ),

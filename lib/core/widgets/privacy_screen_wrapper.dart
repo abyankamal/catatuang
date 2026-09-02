@@ -2,10 +2,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/auth/presentation/pin_lock_screen.dart';
 import '../../features/settings/application/settings_providers.dart';
 
 /// Wrapper widget untuk memberikan efek blur murni ketika aplikasi
-/// berada di background, app switcher, atau inactive state.
+/// berada di background/app switcher, serta gerbang penguncian PIN 6-digit.
 class PrivacyScreenWrapper extends ConsumerStatefulWidget {
   final Widget child;
 
@@ -41,6 +42,15 @@ class _PrivacyScreenWrapperState extends ConsumerState<PrivacyScreenWrapper>
     // Aktifkan blur ketika aplikasi tidak berada dalam foreground aktif (resumed)
     final isBackground = state != AppLifecycleState.resumed;
 
+    if (state == AppLifecycleState.paused) {
+      // Kunci kembali jika PIN aktif saat aplikasi berpindah ke background
+      final isPinEnabled =
+          ref.read(appSettingsStreamProvider).valueOrNull?.isPinEnabled ?? false;
+      if (isPinEnabled) {
+        ref.read(isAppUnlockedProvider.notifier).state = false;
+      }
+    }
+
     if (_isBackground != isBackground) {
       setState(() {
         _isBackground = isBackground;
@@ -51,10 +61,13 @@ class _PrivacyScreenWrapperState extends ConsumerState<PrivacyScreenWrapper>
   @override
   Widget build(BuildContext context) {
     final settingsAsync = ref.watch(appSettingsStreamProvider);
-    final isPrivacyEnabled =
-        settingsAsync.valueOrNull?.isPrivacyScreenEnabled ?? true;
+    final settings = settingsAsync.valueOrNull;
+    final isPrivacyEnabled = settings?.isPrivacyScreenEnabled ?? true;
+    final isPinEnabled = settings?.isPinEnabled ?? false;
+    final isUnlocked = ref.watch(isAppUnlockedProvider);
 
     final shouldBlur = _isBackground && isPrivacyEnabled;
+    final shouldShowPinLock = isPinEnabled && !isUnlocked;
 
     return Stack(
       fit: StackFit.expand,
@@ -70,6 +83,17 @@ class _PrivacyScreenWrapperState extends ConsumerState<PrivacyScreenWrapper>
               child: Container(
                 color: Colors.black.withValues(alpha: 0.15),
               ),
+            ),
+          ),
+
+        // Layer Kunci PIN: Tampilkan jika PIN diaktifkan dan belum di-unlock
+        if (shouldShowPinLock)
+          Positioned.fill(
+            child: PinLockScreen(
+              mode: PinLockMode.unlock,
+              onSuccess: () {
+                ref.read(isAppUnlockedProvider.notifier).state = true;
+              },
             ),
           ),
       ],
