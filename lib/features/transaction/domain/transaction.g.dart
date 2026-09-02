@@ -156,6 +156,19 @@ const TransactionSchema = CollectionSchema(
           caseSensitive: true,
         )
       ],
+    ),
+    r'debtSyncId': IndexSchema(
+      id: 645729444105903494,
+      name: r'debtSyncId',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'debtSyncId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
     )
   },
   links: {},
@@ -783,6 +796,72 @@ extension TransactionQueryWhere
               indexName: r'transactionGroupId',
               lower: [],
               upper: [transactionGroupId],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<Transaction, Transaction, QAfterWhereClause> debtSyncIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'debtSyncId',
+        value: [null],
+      ));
+    });
+  }
+
+  QueryBuilder<Transaction, Transaction, QAfterWhereClause>
+      debtSyncIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'debtSyncId',
+        lower: [null],
+        includeLower: false,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<Transaction, Transaction, QAfterWhereClause> debtSyncIdEqualTo(
+      String? debtSyncId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'debtSyncId',
+        value: [debtSyncId],
+      ));
+    });
+  }
+
+  QueryBuilder<Transaction, Transaction, QAfterWhereClause>
+      debtSyncIdNotEqualTo(String? debtSyncId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'debtSyncId',
+              lower: [],
+              upper: [debtSyncId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'debtSyncId',
+              lower: [debtSyncId],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'debtSyncId',
+              lower: [debtSyncId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'debtSyncId',
+              lower: [],
+              upper: [debtSyncId],
               includeUpper: false,
             ));
       }

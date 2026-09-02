@@ -299,6 +299,7 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
                     ),
                     const SizedBox(height: 8),
                     contactsAsync.when(
+                      skipLoadingOnReload: true,
                       data: (contacts) {
                         if (contacts.isEmpty) {
                           return Container(
@@ -571,6 +572,7 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
                               _buildLabel('Pilih Dompet Terkait'),
                               const SizedBox(height: 8),
                               walletsAsync.when(
+                                skipLoadingOnReload: true,
                                 data: (wallets) {
                                   if (wallets.isEmpty) {
                                     return const Text('Belum ada dompet aktif.');

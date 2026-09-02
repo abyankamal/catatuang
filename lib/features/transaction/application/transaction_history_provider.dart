@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
 import '../data/transaction_repository.dart';
 import '../domain/transaction.dart';
 
@@ -97,4 +99,66 @@ final monthlySummaryProvider = FutureProvider.autoDispose<MonthlySummary>((ref) 
   ref.watch(transactionHistoryStreamProvider);
 
   return repo.calculateMonthlySummary(filter.year, filter.month);
+});
+
+class DailyTransactionsGroup {
+  final String dateKey;
+  final DateTime date;
+  final String formattedHeaderDate;
+  final List<Transaction> transactions;
+
+  const DailyTransactionsGroup({
+    required this.dateKey,
+    required this.date,
+    required this.formattedHeaderDate,
+    required this.transactions,
+  });
+}
+
+final groupedTransactionsProvider = Provider.autoDispose<AsyncValue<List<DailyTransactionsGroup>>>((ref) {
+  final txAsync = ref.watch(transactionHistoryStreamProvider);
+
+  return txAsync.whenData((transactions) {
+    if (transactions.isEmpty) return const [];
+
+    final dateFormatKey = DateFormat('yyyy-MM-dd');
+    final shortDateFormat = DateFormat('dd MMM yyyy', 'id_ID');
+    final fullDateFormat = DateFormat('EEEE, dd MMMM yyyy', 'id_ID');
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    final Map<String, List<Transaction>> groupedMap = {};
+    for (final tx in transactions) {
+      final dateKey = dateFormatKey.format(tx.date);
+      groupedMap.putIfAbsent(dateKey, () => []).add(tx);
+    }
+
+    final List<DailyTransactionsGroup> result = [];
+    for (final entry in groupedMap.entries) {
+      final firstTx = entry.value.first;
+      final date = DateTime(firstTx.date.year, firstTx.date.month, firstTx.date.day);
+      
+      String header;
+      if (date == today) {
+        header = 'Hari ini - ${shortDateFormat.format(firstTx.date)}';
+      } else if (date == yesterday) {
+        header = 'Kemarin - ${shortDateFormat.format(firstTx.date)}';
+      } else {
+        header = fullDateFormat.format(firstTx.date);
+      }
+
+      result.add(
+        DailyTransactionsGroup(
+          dateKey: entry.key,
+          date: date,
+          formattedHeaderDate: header,
+          transactions: entry.value,
+        ),
+      );
+    }
+
+    return result;
+  });
 });

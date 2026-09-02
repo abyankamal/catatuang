@@ -377,6 +377,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       _buildLabel('Pilih Dompet *'),
                       const SizedBox(height: 8),
                       walletsAsync.when(
+                        skipLoadingOnReload: true,
                         data: (wallets) {
                           final regularWallets = wallets
                               .where((w) => !w.isGoal)
@@ -468,6 +469,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       ),
                       const SizedBox(height: 8),
                       categoriesAsync.when(
+                        skipLoadingOnReload: true,
                         data: (categories) {
                           final filteredCategories = categories
                               .where((c) => c.type == _selectedType)
@@ -672,6 +674,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   Widget _buildTransferWalletsSection(AsyncValue<List<dynamic>> walletsAsync) {
     return walletsAsync.when(
+      skipLoadingOnReload: true,
       data: (wallets) {
         final regularWallets = wallets.where((w) => !w.isGoal).toList();
         if (regularWallets.length < 2) {

@@ -56,12 +56,19 @@ final monthlyBudgetSummaryProvider = FutureProvider<MonthlyBudgetSummary>((ref) 
   return await repo.calculateMonthlyBudgetSummary(filter.year, filter.month);
 });
 
+/// Stream khusus anggaran aktif bulan berjalan (now.year, now.month) untuk dashboard
+final currentMonthBudgetsStreamProvider = StreamProvider<List<Budget>>((ref) {
+  final now = DateTime.now();
+  final repo = ref.watch(budgetRepositoryProvider);
+  return repo.watchActiveBudgets(now.year, now.month);
+});
+
 /// Current month budget summary for Dashboard quick card
 final currentMonthBudgetSummaryProvider = FutureProvider<MonthlyBudgetSummary>((ref) async {
   final repo = ref.watch(budgetRepositoryProvider);
   final now = DateTime.now();
 
-  ref.watch(activeBudgetsStreamProvider);
+  ref.watch(currentMonthBudgetsStreamProvider);
   ref.watch(recentTransactionsStreamProvider);
   ref.watch(activeCategoriesStreamProvider);
 

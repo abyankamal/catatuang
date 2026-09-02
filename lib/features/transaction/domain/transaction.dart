@@ -28,6 +28,7 @@ class Transaction {
   @Index()
   String? transactionGroupId;     // UUID yang mengikat grup transfer (3-Transaction pattern)
   
+  @Index()
   String? debtSyncId;             // Referensi ke Debt.syncId (jika terkait utang/piutang)
   
   late DateTime createdAt;

@@ -332,6 +332,7 @@ class _DebtPaymentBottomSheetState extends ConsumerState<DebtPaymentBottomSheet>
                 ),
                 const SizedBox(height: 8),
                 walletsAsync.when(
+                  skipLoadingOnReload: true,
                   data: (wallets) {
                     if (wallets.isEmpty) {
                       return const Text('Belum ada dompet aktif.');

@@ -76,6 +76,7 @@ class WalletListScreen extends ConsumerWidget {
         ),
       ),
       body: walletsAsync.when(
+        skipLoadingOnReload: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(
           child: Text('Terjadi kesalahan: $err', style: GoogleFonts.outfit()),

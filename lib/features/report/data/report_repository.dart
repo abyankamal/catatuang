@@ -216,20 +216,56 @@ class ReportRepository {
       walletNameMap[w.syncId] = w.name;
     }
 
-    return transactions.map((t) {
-      final categoryName = catNameMap[t.categorySyncId ?? ''] ??
-          (t.type.contains('TRANSFER') ? 'Transfer Dompet' : 'Tanpa Kategori');
-      final walletName = walletNameMap[t.walletSyncId] ?? 'Dompet';
+    if (kIsWeb || transactions.length < 50) {
+      return transactions.map((t) {
+        final categoryName = catNameMap[t.categorySyncId ?? ''] ??
+            (t.type.contains('TRANSFER') ? 'Transfer Dompet' : 'Tanpa Kategori');
+        final walletName = walletNameMap[t.walletSyncId] ?? 'Dompet';
 
-      return DetailedTransactionItem(
-        date: t.date,
-        type: t.type,
-        amount: t.amount,
-        walletName: walletName,
-        categoryName: categoryName,
-        notes: t.description,
-      );
+        return DetailedTransactionItem(
+          date: t.date,
+          type: t.type,
+          amount: t.amount,
+          walletName: walletName,
+          categoryName: categoryName,
+          notes: t.description,
+        );
+      }).toList();
+    }
+
+    // Off-main-thread computation for large export mapping (AGENTS.md §5)
+    final rawTxs = transactions.map((t) => {
+      'date': t.date.toIso8601String(),
+      'type': t.type,
+      'amount': t.amount,
+      'categorySyncId': t.categorySyncId,
+      'walletSyncId': t.walletSyncId,
+      'description': t.description,
     }).toList();
+
+    return await Isolate.run(() {
+      return rawTxs.map((t) {
+        final date = DateTime.parse(t['date'] as String);
+        final type = t['type'] as String;
+        final amount = t['amount'] as double;
+        final catSyncId = t['categorySyncId'] as String?;
+        final walletSyncId = t['walletSyncId'] as String;
+        final description = t['description'] as String?;
+
+        final categoryName = catNameMap[catSyncId ?? ''] ??
+            (type.contains('TRANSFER') ? 'Transfer Dompet' : 'Tanpa Kategori');
+        final walletName = walletNameMap[walletSyncId] ?? 'Dompet';
+
+        return DetailedTransactionItem(
+          date: date,
+          type: type,
+          amount: amount,
+          walletName: walletName,
+          categoryName: categoryName,
+          notes: description,
+        );
+      }).toList();
+    });
   }
 
   static MonthlyReportData _aggregateData(

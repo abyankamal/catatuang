@@ -247,6 +247,7 @@ class _TopUpGoalScreenState extends ConsumerState<TopUpGoalScreen> {
           builder: (context, ref, child) {
             final activeWallets = ref.watch(activeRegularWalletsStreamProvider);
             return activeWallets.when(
+              skipLoadingOnReload: true,
               data: (wallets) {
                 if (wallets.isEmpty) {
                   return const Padding(

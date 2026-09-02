@@ -29,11 +29,8 @@ class TransactionHistoryScreen extends ConsumerWidget {
   static final Wallet _fallbackWallet = Wallet()..name = 'Dompet';
 
   // Cached DateFormatters to eliminate repeated locale pattern parsing
-  static final DateFormat _dateFormatKey = DateFormat('yyyy-MM-dd');
   static final DateFormat _timeFormat = DateFormat('HH:mm');
   static final DateFormat _detailDateTimeFormat = DateFormat('dd MMMM yyyy, HH:mm', 'id_ID');
-  static final DateFormat _shortDateFormat = DateFormat('dd MMM yyyy', 'id_ID');
-  static final DateFormat _fullDateFormat = DateFormat('EEEE, dd MMMM yyyy', 'id_ID');
 
   void _showMonthPicker(BuildContext context, WidgetRef ref, TransactionHistoryFilter currentFilter) {
     int tempYear = currentFilter.year;
@@ -465,7 +462,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(transactionHistoryFilterProvider);
-    final transactionsAsync = ref.watch(transactionHistoryStreamProvider);
+    final groupedDailyAsync = ref.watch(groupedTransactionsProvider);
     final summaryAsync = ref.watch(monthlySummaryProvider);
     final walletsAsync = ref.watch(activeWalletsStreamProvider);
     final categoriesAsync = ref.watch(activeCategoriesStreamProvider);
@@ -742,7 +739,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
 
           // Transactions List
           Expanded(
-            child: transactionsAsync.when(
+            child: groupedDailyAsync.when(
               skipLoadingOnReload: true,
               loading: () => const Center(
                 child: CircularProgressIndicator(),
@@ -753,8 +750,8 @@ class TransactionHistoryScreen extends ConsumerWidget {
                   style: GoogleFonts.outfit(color: AppColors.expense),
                 ),
               ),
-              data: (transactions) {
-                if (transactions.isEmpty) {
+              data: (groupedList) {
+                if (groupedList.isEmpty) {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(32.0),
@@ -790,22 +787,12 @@ class TransactionHistoryScreen extends ConsumerWidget {
                   );
                 }
 
-                // Group transactions by Date key (using cached DateFormat)
-                final Map<String, List<Transaction>> grouped = {};
-                for (final tx in transactions) {
-                  final dateKey = _dateFormatKey.format(tx.date);
-                  grouped.putIfAbsent(dateKey, () => []).add(tx);
-                }
-
-                final dateKeys = grouped.keys.toList();
-
                 return ListView.builder(
                   padding: const EdgeInsets.only(left: 16, right: 16, bottom: 24),
-                  itemCount: dateKeys.length,
+                  itemCount: groupedList.length,
                   itemBuilder: (context, index) {
-                    final dateStr = dateKeys[index];
-                    final txsInDate = grouped[dateStr]!;
-                    final date = DateTime.parse(dateStr);
+                    final group = groupedList[index];
+                    final txsInDate = group.transactions;
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -813,7 +800,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           child: Text(
-                            _formatHeaderDate(date),
+                            group.formattedHeaderDate,
                             style: GoogleFonts.outfit(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -919,20 +906,5 @@ class TransactionHistoryScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  String _formatHeaderDate(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    final checkDate = DateTime(date.year, date.month, date.day);
-
-    if (checkDate == today) {
-      return 'Hari ini - ${_shortDateFormat.format(date)}';
-    } else if (checkDate == yesterday) {
-      return 'Kemarin - ${_shortDateFormat.format(date)}';
-    } else {
-      return _fullDateFormat.format(date);
-    }
   }
 }

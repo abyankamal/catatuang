@@ -110,6 +110,7 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> with Si
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: categoriesAsync.when(
+        skipLoadingOnReload: true,
         data: (categories) {
           final expenseCategories = categories.where((c) => c.type == 'EXPENSE').toList();
           final incomeCategories = categories.where((c) => c.type == 'INCOME').toList();

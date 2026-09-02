@@ -368,6 +368,7 @@ class _WithdrawGoalScreenState extends ConsumerState<WithdrawGoalScreen> {
                     _buildLabel('Pindahkan ke Dompet Tujuan *'),
                     const SizedBox(height: 8),
                     walletsAsync.when(
+                      skipLoadingOnReload: true,
                       data: (wallets) {
                         final regularWallets = wallets.where((w) => !w.isGoal).toList();
                         if (regularWallets.isEmpty) {
