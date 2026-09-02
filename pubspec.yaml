@@ -1,7 +1,7 @@
 name: catatuang
-description: "A new Flutter project."
+description: "CatatUang - Aplikasi Pengelola Keuangan Pribadi Offline-First"
 publish_to: 'none'
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   sdk: ^3.12.2
@@ -28,9 +28,19 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   isar_generator: ^3.1.0+1
   build_runner: ^2.4.13
+  flutter_launcher_icons: ^0.14.3
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
     - assets/icons/
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/images/logo_512.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/logo_512.png"
