@@ -149,6 +149,13 @@ class WalletRepository {
       throw Exception('Dompet tidak ditemukan');
     }
 
+    // Proteksi integritas saldo: Dilarang menonaktifkan dompet yang masih memiliki saldo aktif
+    if (wallet.balance.abs() > 0.001) {
+      throw Exception(
+        'Dompet masih memiliki saldo. Pindahkan atau kosongkan saldo dompet terlebih dahulu sebelum menonaktifkannya.',
+      );
+    }
+
     // DILARANG keras menghapus data permanen agar history transaksi tidak rusak
     wallet.isActive = false;
     wallet.updatedAt = DateTime.now();

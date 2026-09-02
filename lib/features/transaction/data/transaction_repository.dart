@@ -67,6 +67,9 @@ class TransactionRepository {
     if (wallet == null) {
       throw Exception('Dompet tidak ditemukan.');
     }
+    if (!wallet.isActive) {
+      throw Exception('Tidak dapat mencatat transaksi pada dompet yang dinonaktifkan.');
+    }
 
     final now = DateTime.now();
     final tx = Transaction()
@@ -585,6 +588,9 @@ class TransactionRepository {
 
       if (newWallet == null) {
         throw Exception('Dompet tidak ditemukan.');
+      }
+      if (!newWallet.isActive) {
+        throw Exception('Tidak dapat memindahkan transaksi ke dompet yang dinonaktifkan.');
       }
 
       if (type == 'INCOME') {

@@ -125,5 +125,28 @@ void main() {
 
       expect(() => validateUpdate(transferTx), throwsA(isA<UnsupportedError>()));
     });
+
+    test('Soft deleting a wallet with non-zero balance is prohibited', () {
+      final activeWalletWithBalance = Wallet()
+        ..id = 1
+        ..name = 'BCA Tabungan'
+        ..balance = 500000.0
+        ..isActive = true;
+
+      final zeroBalanceWallet = Wallet()
+        ..id = 2
+        ..name = 'Dompet Lama Kosong'
+        ..balance = 0.0
+        ..isActive = true;
+
+      void validateSoftDelete(Wallet wallet) {
+        if (wallet.balance.abs() > 0.001) {
+          throw Exception('Dompet masih memiliki saldo.');
+        }
+      }
+
+      expect(() => validateSoftDelete(activeWalletWithBalance), throwsA(isA<Exception>()));
+      expect(() => validateSoftDelete(zeroBalanceWallet), returnsNormally);
+    });
   });
 }
