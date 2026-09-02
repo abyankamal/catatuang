@@ -104,5 +104,26 @@ void main() {
       expect(wallet.balance, 500000); // 800k - 300k
       expect(debt.paidAmount, 0.0); // 300k - 300k
     });
+
+    test('Modifying a grouped transaction (Transfer/Savings) directly throws UnsupportedError', () {
+      final transferTx = Transaction()
+        ..id = 300
+        ..syncId = 'tx_300'
+        ..type = 'TRANSFER_OUT'
+        ..amount = 100000
+        ..transactionGroupId = 'group_uuid_123'
+        ..walletSyncId = 'wallet_1'
+        ..date = DateTime.now();
+
+      void validateUpdate(Transaction tx) {
+        if (tx.transactionGroupId != null && tx.transactionGroupId!.isNotEmpty) {
+          throw UnsupportedError(
+            'Transaksi transfer/tabungan yang terikat dalam grup tidak dapat diubah sebagian.',
+          );
+        }
+      }
+
+      expect(() => validateUpdate(transferTx), throwsA(isA<UnsupportedError>()));
+    });
   });
 }

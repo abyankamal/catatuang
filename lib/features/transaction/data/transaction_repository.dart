@@ -536,6 +536,15 @@ class TransactionRepository {
       throw Exception('Transaksi tidak ditemukan.');
     }
 
+    // Proteksi 3-Transaction Transfer Pattern (AGENTS.md §4)
+    // Transaksi transfer/tabungan yang terikat dalam grup tidak boleh diubah sebagian secara sepihak
+    if (oldTx.transactionGroupId != null && oldTx.transactionGroupId!.isNotEmpty) {
+      throw UnsupportedError(
+        'Transaksi transfer/tabungan yang terikat dalam grup tidak dapat diubah sebagian. '
+        'Silakan hapus transaksi ini dan buat transfer baru untuk menjaga konsistensi saldo.',
+      );
+    }
+
     if (amount <= 0 || !amount.isFinite) {
       throw ArgumentError('Nominal transaksi harus bernilai lebih dari 0 dan valid.');
     }
