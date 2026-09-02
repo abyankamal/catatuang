@@ -52,7 +52,12 @@ class TransactionRepository {
     String? categorySyncId,
     String? description,
   }) async {
-    // 1. Period locking check (AGENTS.md §4)
+    // 1. Amount validity check
+    if (amount <= 0 || !amount.isFinite) {
+      throw ArgumentError('Nominal transaksi harus bernilai lebih dari 0 dan valid.');
+    }
+
+    // 2. Period locking check (AGENTS.md §4)
     final settings = await _isar.appSettings.where().findFirst();
     if (settings?.lockedUntil != null && !date.isAfter(settings!.lockedUntil!)) {
       throw LockedPeriodException();
@@ -529,6 +534,10 @@ class TransactionRepository {
     final oldTx = await _isar.transactions.get(id);
     if (oldTx == null) {
       throw Exception('Transaksi tidak ditemukan.');
+    }
+
+    if (amount <= 0 || !amount.isFinite) {
+      throw ArgumentError('Nominal transaksi harus bernilai lebih dari 0 dan valid.');
     }
 
     // Period locking check for both old & new date

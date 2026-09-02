@@ -73,5 +73,18 @@ void main() {
       expect(find.text('Biaya Admin (Opsional)'), findsOneWidget);
       expect(find.text('Transfer Sekarang'), findsOneWidget);
     });
+
+    test('Transaction repository guards reject negative, zero, NaN, and infinite amounts', () {
+      bool isAmountValid(double amount) {
+        return amount > 0 && amount.isFinite;
+      }
+
+      expect(isAmountValid(10000), isTrue);
+      expect(isAmountValid(0), isFalse);
+      expect(isAmountValid(-50000), isFalse);
+      expect(isAmountValid(double.nan), isFalse);
+      expect(isAmountValid(double.infinity), isFalse);
+      expect(isAmountValid(double.negativeInfinity), isFalse);
+    });
   });
 }

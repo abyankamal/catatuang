@@ -48,10 +48,15 @@ class ContactRepository {
     String? phoneNumber,
     String? email,
   }) async {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      throw ArgumentError('Nama kontak tidak boleh kosong.');
+    }
+
     final now = DateTime.now();
     final contact = Contact()
       ..syncId = _uuid.v4()
-      ..name = name.trim()
+      ..name = trimmedName
       ..phoneNumber = phoneNumber?.trim().isEmpty == true ? null : phoneNumber?.trim()
       ..email = email?.trim().isEmpty == true ? null : email?.trim()
       ..isActive = true
@@ -77,7 +82,12 @@ class ContactRepository {
       throw Exception('Kontak tidak ditemukan.');
     }
 
-    contact.name = name.trim();
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      throw ArgumentError('Nama kontak tidak boleh kosong.');
+    }
+
+    contact.name = trimmedName;
     contact.phoneNumber = phoneNumber?.trim().isEmpty == true ? null : phoneNumber?.trim();
     contact.email = email?.trim().isEmpty == true ? null : email?.trim();
     contact.updatedAt = DateTime.now();

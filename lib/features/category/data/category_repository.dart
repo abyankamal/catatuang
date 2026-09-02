@@ -38,10 +38,15 @@ class CategoryRepository {
     String icon = 'category',
     int colorValue = 0xFF5D5CFF,
   }) async {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      throw ArgumentError('Nama kategori tidak boleh kosong.');
+    }
+
     final now = DateTime.now();
     final category = Category()
       ..syncId = _uuid.v4()
-      ..name = name
+      ..name = trimmedName
       ..type = type
       ..icon = icon
       ..colorValue = colorValue
@@ -158,7 +163,12 @@ class CategoryRepository {
     final category = await _isar.categorys.get(id);
     if (category == null) throw Exception('Kategori tidak ditemukan');
 
-    category.name = name;
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      throw ArgumentError('Nama kategori tidak boleh kosong.');
+    }
+
+    category.name = trimmedName;
     category.type = type;
     if (icon != null) category.icon = icon;
     if (colorValue != null) category.colorValue = colorValue;
