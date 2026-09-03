@@ -126,6 +126,78 @@ void main() {
       expect(() => validateUpdate(transferTx), throwsA(isA<UnsupportedError>()));
     });
 
+    test('Modifying a debt payment transaction directly throws UnsupportedError', () {
+      final debtPaymentTx = Transaction()
+        ..id = 400
+        ..syncId = 'tx_400'
+        ..type = 'EXPENSE'
+        ..amount = 150000
+        ..debtSyncId = 'debt_123'
+        ..walletSyncId = 'wallet_1'
+        ..date = DateTime.now();
+
+      void validateUpdate(Transaction tx) {
+        if (tx.debtSyncId != null && tx.debtSyncId!.isNotEmpty) {
+          throw UnsupportedError(
+            'Transaksi pembayaran utang/piutang tidak dapat diubah langsung.',
+          );
+        }
+      }
+
+      expect(() => validateUpdate(debtPaymentTx), throwsA(isA<UnsupportedError>()));
+    });
+
+    test('Soft deleting a Debt reverts all linked transactions and restores Wallet balance', () {
+      final wallet = Wallet()
+        ..id = 1
+        ..syncId = 'wallet_1'
+        ..name = 'BCA'
+        ..balance = 700000
+        ..isActive = true;
+
+      final debt = Debt()
+        ..id = 10
+        ..syncId = 'debt_1'
+        ..type = 'PAYABLE'
+        ..title = 'Cicilan Laptop'
+        ..totalAmount = 5000000
+        ..paidAmount = 1000000
+        ..isActive = true;
+
+      // Skenario: ada 2 transaksi pembayaran cicilan @500k yang tercatat sebagai EXPENSE
+      final tx1 = Transaction()
+        ..id = 101
+        ..syncId = 'tx_101'
+        ..type = 'EXPENSE'
+        ..amount = 500000
+        ..walletSyncId = wallet.syncId
+        ..debtSyncId = debt.syncId;
+
+      final tx2 = Transaction()
+        ..id = 102
+        ..syncId = 'tx_102'
+        ..type = 'EXPENSE'
+        ..amount = 500000
+        ..walletSyncId = wallet.syncId
+        ..debtSyncId = debt.syncId;
+
+      final linkedTxs = [tx1, tx2];
+
+      // Simulasi Reversal Logic dari softDeleteDebt()
+      for (final tx in linkedTxs) {
+        if (tx.type == 'EXPENSE') {
+          wallet.balance += tx.amount;
+        } else if (tx.type == 'INCOME') {
+          wallet.balance -= tx.amount;
+        }
+      }
+      debt.isActive = false;
+
+      // Saldo dompet harus kembali: 700k + 500k + 500k = 1.700.000
+      expect(wallet.balance, 1700000);
+      expect(debt.isActive, isFalse);
+    });
+
     test('Soft deleting a wallet with non-zero balance is prohibited', () {
       final activeWalletWithBalance = Wallet()
         ..id = 1

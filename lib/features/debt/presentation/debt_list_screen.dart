@@ -38,8 +38,8 @@ class _DebtListScreenState extends ConsumerState<DebtListScreen> {
           style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'Apakah Anda yakin ingin menghapus catatan "${debt.title}"?',
-          style: GoogleFonts.hankenGrotesk(),
+          'Menghapus catatan "${debt.title}" akan otomatis menghapus seluruh riwayat transaksi terkait dan mengembalikan (revert) saldo dompet Anda.\n\nApakah Anda yakin ingin melanjutkan?',
+          style: GoogleFonts.hankenGrotesk(height: 1.4),
         ),
         actions: [
           TextButton(
@@ -51,13 +51,15 @@ class _DebtListScreenState extends ConsumerState<DebtListScreen> {
               Navigator.pop(ctx);
               final success = await ref
                   .read(debtControllerProvider.notifier)
-                  .deleteDebt(debt.id);
+                  .deleteDebt(debt.id, revertLinkedTransactions: true);
 
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      success ? 'Catatan berhasil dihapus.' : 'Gagal menghapus catatan.',
+                      success
+                          ? 'Catatan dan riwayat transaksi terkait berhasil dihapus (saldo dikembalikan).'
+                          : 'Gagal menghapus catatan.',
                     ),
                     backgroundColor: success ? AppColors.secondary : AppColors.expense,
                   ),
@@ -69,7 +71,7 @@ class _DebtListScreenState extends ConsumerState<DebtListScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Hapus'),
+            child: const Text('Hapus & Revert Saldo'),
           ),
         ],
       ),

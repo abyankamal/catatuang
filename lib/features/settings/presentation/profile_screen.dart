@@ -340,6 +340,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final result = await service.pickAndRestoreDatabase();
 
       if (!mounted) return;
+
+      if (result.isSuccess) {
+        // Invalidate seluruh provider data inti agar UI langsung me-refresh data Isar yang baru
+        ref.invalidate(appSettingsStreamProvider);
+        ref.invalidate(activeWalletsStreamProvider);
+        ref.invalidate(recentTransactionsStreamProvider);
+        ref.invalidate(dashboardSummaryProvider);
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result.message),

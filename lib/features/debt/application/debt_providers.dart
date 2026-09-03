@@ -142,11 +142,14 @@ class DebtController extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  Future<bool> deleteDebt(int id) async {
+  Future<bool> deleteDebt(int id, {bool revertLinkedTransactions = true}) async {
     state = const AsyncValue.loading();
     try {
-      await _repo.softDeleteDebt(id);
+      await _repo.softDeleteDebt(id, revertLinkedTransactions: revertLinkedTransactions);
 
+      _ref.invalidate(activeWalletsStreamProvider);
+      _ref.invalidate(recentTransactionsStreamProvider);
+      _ref.invalidate(dashboardSummaryProvider);
       _ref.invalidate(activeDebtsStreamProvider);
       _ref.invalidate(debtSummaryProvider);
 

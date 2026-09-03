@@ -548,6 +548,14 @@ class TransactionRepository {
       );
     }
 
+    // Proteksi Transaksi Pembayaran Utang/Piutang (Integritas Debt.paidAmount)
+    if (oldTx.debtSyncId != null && oldTx.debtSyncId!.isNotEmpty) {
+      throw UnsupportedError(
+        'Transaksi pembayaran utang/piutang tidak dapat diubah langsung. '
+        'Silakan hapus transaksi ini dan catat ulang pembayaran dari menu Utang & Piutang untuk menjaga akurasi saldo utang.',
+      );
+    }
+
     if (amount <= 0 || !amount.isFinite) {
       throw ArgumentError('Nominal transaksi harus bernilai lebih dari 0 dan valid.');
     }

@@ -320,8 +320,8 @@ class DebtRepository {
     return debt;
   }
 
-  /// Soft delete a debt record
-  Future<void> softDeleteDebt(int id) async {
+  /// Soft delete a debt record and revert any linked transactions/wallet balances
+  Future<void> softDeleteDebt(int id, {bool revertLinkedTransactions = true}) async {
     final debt = await _isar.debts.get(id);
     if (debt == null) {
       throw Exception('Catatan utang/piutang tidak ditemukan.');
@@ -333,10 +333,42 @@ class DebtRepository {
       throw LockedPeriodException();
     }
 
+    final now = DateTime.now();
     debt.isActive = false;
-    debt.updatedAt = DateTime.now();
+    debt.updatedAt = now;
 
     await _isar.writeTxn(() async {
+      if (revertLinkedTransactions) {
+        // Cari seluruh transaksi yang terhubung dengan debt ini
+        final linkedTransactions = await _isar.transactions
+            .filter()
+            .debtSyncIdEqualTo(debt.syncId)
+            .findAll();
+
+        for (final tx in linkedTransactions) {
+          final wallet = await _isar.wallets
+              .filter()
+              .syncIdEqualTo(tx.walletSyncId)
+              .findFirst();
+
+          if (wallet != null) {
+            // Reversal logic:
+            // INCOME (penerimaan pinjaman / pembayaran piutang) -> kurangi saldo
+            // EXPENSE (pemberian pinjaman / pembayaran utang) -> tambahkan saldo
+            if (tx.type == 'INCOME') {
+              wallet.balance -= tx.amount;
+            } else if (tx.type == 'EXPENSE') {
+              wallet.balance += tx.amount;
+            }
+            wallet.updatedAt = now;
+            await _isar.wallets.put(wallet);
+          }
+
+          // Hapus transaksi terkait
+          await _isar.transactions.delete(tx.id);
+        }
+      }
+
       await _isar.debts.put(debt);
     });
   }

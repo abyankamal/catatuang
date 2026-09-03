@@ -179,6 +179,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
     final category = categoryMap[tx.categorySyncId ?? ''] ?? _fallbackCategory;
     final wallet = walletMap[tx.walletSyncId] ?? _fallbackWallet;
     final isTransferTx = tx.type.contains('TRANSFER');
+    final isDebtTx = tx.debtSyncId != null && tx.debtSyncId!.isNotEmpty;
 
     showModalBottomSheet(
       context: context,
@@ -271,7 +272,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
                 _detailRow('Catatan', tx.description!),
               ],
               const SizedBox(height: 28),
-              if (isTransferTx) ...[
+              if (isTransferTx || isDebtTx) ...[
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -281,7 +282,9 @@ class TransactionHistoryScreen extends ConsumerWidget {
                     },
                     icon: const Icon(Icons.delete_outline, color: AppColors.expense),
                     label: Text(
-                      'Hapus Transaksi Transfer',
+                      isTransferTx
+                          ? 'Hapus Transaksi Transfer'
+                          : 'Hapus Transaksi Pembayaran Utang',
                       style: GoogleFonts.outfit(
                         color: AppColors.expense,
                         fontWeight: FontWeight.bold,
@@ -298,7 +301,9 @@ class TransactionHistoryScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '* Transaksi transfer tidak dapat diedit langsung untuk menjaga konsistensi saldo. Silakan hapus dan catat ulang transfer jika ada kesalahan.',
+                  isTransferTx
+                      ? '* Transaksi transfer tidak dapat diedit langsung untuk menjaga konsistensi saldo. Silakan hapus dan catat ulang transfer jika ada kesalahan.'
+                      : '* Transaksi pembayaran utang/piutang tidak dapat diedit langsung. Silakan hapus transaksi ini (saldo & progres utang akan otomatis disesuaikan) lalu catat ulang dari menu Utang & Piutang.',
                   style: GoogleFonts.hankenGrotesk(
                     fontSize: 11,
                     color: Colors.grey.shade600,

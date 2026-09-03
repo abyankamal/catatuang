@@ -153,6 +153,20 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       return;
     }
 
+    if (isEditMode &&
+        widget.existingTransaction?.debtSyncId != null &&
+        widget.existingTransaction!.debtSyncId!.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Transaksi pembayaran utang/piutang tidak dapat diedit langsung. Silakan hapus dan catat ulang dari menu Utang & Piutang.',
+          ),
+          backgroundColor: AppColors.expense,
+        ),
+      );
+      return;
+    }
+
     if (_selectedWalletSyncId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Silakan pilih dompet terlebih dahulu.')),
