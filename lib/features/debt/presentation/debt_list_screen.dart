@@ -86,9 +86,9 @@ class _DebtListScreenState extends ConsumerState<DebtListScreen> {
     final statusFilter = ref.watch(debtStatusFilterProvider);
     final debtsAsync = ref.watch(activeDebtsStreamProvider);
     final summaryAsync = ref.watch(debtSummaryProvider);
-    final contactsAsync = ref.watch(activeContactsStreamProvider);
+    final contactsAsync = ref.watch(allContactsStreamProvider);
 
-    // Build contacts lookup map
+    // Build contacts lookup map (includes soft-deleted contacts for historical accuracy)
     final Map<String, Contact> contactMap = {};
     contactsAsync.whenData((contacts) {
       for (final c in contacts) {

@@ -8,6 +8,11 @@ final activeContactsStreamProvider = StreamProvider<List<Contact>>((ref) {
   return repo.watchActiveContacts();
 });
 
+final allContactsStreamProvider = StreamProvider<List<Contact>>((ref) {
+  final repo = ref.watch(contactRepositoryProvider);
+  return repo.watchAllContacts();
+});
+
 class ContactController extends StateNotifier<AsyncValue<void>> {
   final ContactRepository _repo;
 

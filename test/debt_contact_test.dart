@@ -43,7 +43,7 @@ void main() {
           overrides: [
             activeDebtsStreamProvider.overrideWith((ref) => Stream.value([])),
             debtSummaryProvider.overrideWith((ref) => Future.value(const DebtSummary.empty())),
-            activeContactsStreamProvider.overrideWith((ref) => Stream.value([])),
+            allContactsStreamProvider.overrideWith((ref) => Stream.value([])),
           ],
           child: const MaterialApp(
             home: DebtListScreen(),
@@ -122,7 +122,7 @@ void main() {
                 ),
               ),
             ),
-            activeContactsStreamProvider.overrideWith((ref) => Stream.value([mockContact])),
+            allContactsStreamProvider.overrideWith((ref) => Stream.value([mockContact])),
           ],
           child: const MaterialApp(
             home: DebtListScreen(),
@@ -135,6 +135,66 @@ void main() {
       expect(find.text('Budi Santoso'), findsOneWidget);
       expect(find.text('Utang Saya'), findsNWidgets(2)); // in Tab & on card
       expect(find.text('Bayar / Cicil Utang'), findsOneWidget);
+    });
+
+    testWidgets('DebtListScreen displays correct contact name even if contact has been soft-deleted', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final softDeletedContact = Contact()
+        ..syncId = 'contact_archived_99'
+        ..name = 'Siti Rahma (Mantan Rekan)'
+        ..phoneNumber = '08987654321'
+        ..isActive = false // Soft deleted!
+        ..createdAt = DateTime.now()
+        ..updatedAt = DateTime.now();
+
+      final mockDebt = Debt()
+        ..id = 2
+        ..syncId = 'debt_2'
+        ..type = 'RECEIVABLE'
+        ..contactSyncId = 'contact_archived_99'
+        ..title = 'Piutang Proyek Freelance'
+        ..totalAmount = 2500000
+        ..paidAmount = 1000000
+        ..startDate = DateTime.now()
+        ..dueDate = null
+        ..isActive = true
+        ..createdAt = DateTime.now()
+        ..updatedAt = DateTime.now();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            activeDebtsStreamProvider.overrideWith((ref) => Stream.value([mockDebt])),
+            debtSummaryProvider.overrideWith(
+              (ref) => Future.value(
+                const DebtSummary(
+                  totalPayable: 0,
+                  paidPayable: 0,
+                  remainingPayable: 0,
+                  totalReceivable: 2500000,
+                  paidReceivable: 1000000,
+                  remainingReceivable: 1500000,
+                  overdueCount: 0,
+                ),
+              ),
+            ),
+            // allContactsStreamProvider provides all contacts including soft-deleted ones
+            allContactsStreamProvider.overrideWith((ref) => Stream.value([softDeletedContact])),
+          ],
+          child: const MaterialApp(
+            home: DebtListScreen(),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      expect(find.text('Piutang Proyek Freelance'), findsOneWidget);
+      // Historical contact name is preserved on card
+      expect(find.text('Siti Rahma (Mantan Rekan)'), findsOneWidget);
+      expect(find.text('Piutang Saya'), findsNWidgets(2));
     });
   });
 }

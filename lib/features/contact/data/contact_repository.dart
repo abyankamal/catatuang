@@ -25,6 +25,14 @@ class ContactRepository {
         .watch(fireImmediately: true);
   }
 
+  /// Watch all contacts (active and inactive) sorted by name
+  Stream<List<Contact>> watchAllContacts() {
+    return _isar.contacts
+        .where()
+        .sortByName()
+        .watch(fireImmediately: true);
+  }
+
   /// Get active contacts asynchronously
   Future<List<Contact>> getActiveContacts() async {
     return await _isar.contacts
