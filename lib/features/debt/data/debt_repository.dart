@@ -329,8 +329,28 @@ class DebtRepository {
 
     // Period locking check
     final settings = await _isar.appSettings.where().findFirst();
-    if (settings?.lockedUntil != null && !debt.startDate.isAfter(settings!.lockedUntil!)) {
-      throw LockedPeriodException();
+    final lockedUntil = settings?.lockedUntil;
+    if (lockedUntil != null) {
+      if (!debt.startDate.isAfter(lockedUntil)) {
+        throw LockedPeriodException();
+      }
+    }
+
+    // Cari seluruh transaksi yang terhubung dengan debt ini jika perlu di-revert
+    List<Transaction> linkedTransactions = [];
+    if (revertLinkedTransactions) {
+      linkedTransactions = await _isar.transactions
+          .filter()
+          .debtSyncIdEqualTo(debt.syncId)
+          .findAll();
+
+      if (lockedUntil != null) {
+        for (final tx in linkedTransactions) {
+          if (!tx.date.isAfter(lockedUntil)) {
+            throw LockedPeriodException();
+          }
+        }
+      }
     }
 
     final now = DateTime.now();
@@ -339,12 +359,6 @@ class DebtRepository {
 
     await _isar.writeTxn(() async {
       if (revertLinkedTransactions) {
-        // Cari seluruh transaksi yang terhubung dengan debt ini
-        final linkedTransactions = await _isar.transactions
-            .filter()
-            .debtSyncIdEqualTo(debt.syncId)
-            .findAll();
-
         for (final tx in linkedTransactions) {
           final wallet = await _isar.wallets
               .filter()

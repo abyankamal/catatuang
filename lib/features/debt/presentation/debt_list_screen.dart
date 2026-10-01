@@ -54,12 +54,14 @@ class _DebtListScreenState extends ConsumerState<DebtListScreen> {
                   .deleteDebt(debt.id, revertLinkedTransactions: true);
 
               if (mounted) {
+                final error = ref.read(debtControllerProvider).error;
+                final errorMsg = error?.toString().replaceAll(RegExp(r'^Exception:\s*'), '') ?? 'Gagal menghapus catatan.';
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
                       success
                           ? 'Catatan dan riwayat transaksi terkait berhasil dihapus (saldo dikembalikan).'
-                          : 'Gagal menghapus catatan.',
+                          : errorMsg,
                     ),
                     backgroundColor: success ? AppColors.secondary : AppColors.expense,
                   ),
