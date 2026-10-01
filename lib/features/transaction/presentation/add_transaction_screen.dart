@@ -273,10 +273,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         );
       } else {
         final error = ref.read(transactionControllerProvider).error;
+        final errorMsg = error?.toString().replaceAll(RegExp(r'^Exception:\s*'), '') ?? "Terjadi kesalahan";
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Gagal menyimpan transaksi: ${error ?? "Terjadi kesalahan"}',
+              'Gagal menyimpan transaksi: $errorMsg',
             ),
           ),
         );

@@ -128,6 +128,11 @@ class TransactionRepository {
       throw Exception('Dompet sumber atau dompet tujuan tidak ditemukan.');
     }
 
+    final totalRequired = amount + adminFee;
+    if (sourceWallet.balance < totalRequired) {
+      throw Exception('Saldo kantong "${sourceWallet.name}" tidak mencukupi untuk melakukan transfer.');
+    }
+
     final now = DateTime.now();
     final groupId = _uuid.v4();
 
@@ -604,6 +609,9 @@ class TransactionRepository {
       if (type == 'INCOME') {
         newWallet.balance += amount;
       } else if (type == 'EXPENSE') {
+        if (newWallet.balance < amount) {
+          throw Exception('Saldo kantong "${newWallet.name}" tidak mencukupi untuk transaksi ini.');
+        }
         newWallet.balance -= amount;
       }
       newWallet.updatedAt = now;
