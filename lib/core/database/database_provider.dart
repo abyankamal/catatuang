@@ -26,33 +26,27 @@ final isarProvider = StateNotifierProvider<IsarStateNotifier, Isar>((ref) {
   );
 });
 
+const isarSchemas = [
+  WalletSchema,
+  CategorySchema,
+  ContactSchema,
+  DebtSchema,
+  TransactionSchema,
+  AppSettingsSchema,
+  BudgetSchema,
+];
+
 Future<Isar> openIsar() async {
   if (kIsWeb) {
     return Isar.open(
-      [
-        WalletSchema,
-        CategorySchema,
-        ContactSchema,
-        DebtSchema,
-        TransactionSchema,
-        AppSettingsSchema,
-        BudgetSchema,
-      ],
+      isarSchemas,
       directory: '',
     );
   }
 
   final dir = await getApplicationDocumentsDirectory();
   return Isar.open(
-    [
-      WalletSchema,
-      CategorySchema,
-      ContactSchema,
-      DebtSchema,
-      TransactionSchema,
-      AppSettingsSchema,
-      BudgetSchema,
-    ],
+    isarSchemas,
     directory: dir.path,
   );
 }

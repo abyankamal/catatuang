@@ -8,10 +8,18 @@ import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../core/database/database_provider.dart';
+import '../../wallet/domain/wallet.dart';
+
+typedef IsarRestoredCallback = void Function(Isar newIsar);
 
 final backupRestoreServiceProvider = Provider<BackupRestoreService>((ref) {
   final isar = ref.watch(isarProvider);
-  return BackupRestoreService(isar);
+  return BackupRestoreService(
+    isar,
+    onIsarRestored: (newIsar) {
+      ref.read(isarProvider.notifier).updateIsar(newIsar);
+    },
+  );
 });
 
 class BackupRestoreResult {
@@ -28,8 +36,9 @@ class BackupRestoreResult {
 
 class BackupRestoreService {
   final Isar _isar;
+  final IsarRestoredCallback? onIsarRestored;
 
-  BackupRestoreService(this._isar);
+  BackupRestoreService(this._isar, {this.onIsarRestored});
 
   /// Ekspor snapshot database Isar aktif ke file biner .isar
   Future<BackupRestoreResult> exportDatabase() async {
@@ -151,7 +160,32 @@ class BackupRestoreService {
     }
   }
 
-  /// Pulihkan database langsung dari bytes (Snapshot Isar)
+  /// Validasi header biner database Isar (LMDB environment)
+  static bool isValidIsarSnapshot(Uint8List bytes) {
+    // 1. Database Isar minimal memiliki ukuran 1 page (4096 bytes)
+    if (bytes.length < 4096 || bytes.length % 4096 != 0) {
+      return false;
+    }
+
+    // 2. Periksa signature magic LMDB environment pada meta page (offset 20-23 dan version offset 28)
+    final hasMagicPage0 = bytes[20] == 3 &&
+        bytes[21] == 17 &&
+        bytes[22] == 76 &&
+        bytes[23] == 239 &&
+        bytes[28] == 1;
+
+    // Periksa juga meta page 1 alternatif (offset 4096 + 20)
+    final hasMagicPage1 = bytes.length >= 8192 &&
+        bytes[4096 + 20] == 3 &&
+        bytes[4096 + 21] == 17 &&
+        bytes[4096 + 22] == 76 &&
+        bytes[4096 + 23] == 239 &&
+        bytes[4096 + 28] == 1;
+
+    return hasMagicPage0 || hasMagicPage1;
+  }
+
+  /// Pulihkan database langsung dari bytes (Snapshot Isar) dengan Atomic Staging & Rollback
   Future<BackupRestoreResult> restoreDatabaseFromBytes(Uint8List backupBytes) async {
     try {
       if (backupBytes.isEmpty) {
@@ -161,30 +195,123 @@ class BackupRestoreService {
         );
       }
 
-      final docDir = await getApplicationDocumentsDirectory();
-      final dbPath = '${docDir.path}/default.isar';
+      if (kIsWeb) {
+        return const BackupRestoreResult(
+          isSuccess: false,
+          message: 'Pemulihan database lokal tidak didukung di Web.',
+        );
+      }
 
-      // 1. Tutup koneksi instance Isar yang sedang aktif
+      // 1. VALIDASI HEADER BINER: Pastikan format file adalah database Isar valid
+      if (!isValidIsarSnapshot(backupBytes)) {
+        return const BackupRestoreResult(
+          isSuccess: false,
+          message: 'File cadangan tidak valid atau rusak: format database Isar tidak dikenali.',
+        );
+      }
+
+      final docDir = await getApplicationDocumentsDirectory();
+      final tempDir = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final stagedDbName = 'staged_restore_$timestamp';
+      final stagedFile = File('${tempDir.path}/$stagedDbName.isar');
+
+      // 2. TAHAP STAGING: Tulis bytes ke file sementara di direktori temp
+      await stagedFile.writeAsBytes(backupBytes, flush: true);
+
+      // 3. VALIDASI INTEGRITAS: Uji buka database staging dengan skema Isar
+      try {
+        final stagedIsar = await Isar.open(
+          isarSchemas,
+          directory: tempDir.path,
+          name: stagedDbName,
+        );
+        final currentStagedLength = await stagedFile.length();
+        await stagedIsar.wallets.count();
+        await stagedIsar.close();
+
+        // Jika ukuran file berubah saat dibuka, Isar telah mereformat file karena data korup
+        if (currentStagedLength != backupBytes.length) {
+          if (await stagedFile.exists()) {
+            await stagedFile.delete();
+          }
+          return const BackupRestoreResult(
+            isSuccess: false,
+            message: 'File cadangan tidak valid atau rusak: integritas data tidak sesuai.',
+          );
+        }
+      } catch (e) {
+        if (await stagedFile.exists()) {
+          await stagedFile.delete();
+        }
+        return BackupRestoreResult(
+          isSuccess: false,
+          message: 'File cadangan tidak valid atau rusak: $e',
+        );
+      }
+
+      final dbPath = '${docDir.path}/default.isar';
+      final backupPath = '${docDir.path}/default.isar.bak';
+      final dbFile = File(dbPath);
+      final backupFile = File(backupPath);
+
+      // 3. BACKUP DARURAT: Salin database aktif saat ini sebelum ditimpa
+      if (await dbFile.exists()) {
+        if (await backupFile.exists()) {
+          await backupFile.delete();
+        }
+        await dbFile.copy(backupPath);
+      }
+
+      // 4. TUTUP INSTANCE ISAR AKTIF
       if (_isar.isOpen) {
         await _isar.close();
       }
 
-      // 2. Timpa file database default.isar dengan snapshot yang dipulihkan
-      final dbFile = File(dbPath);
+      // 5. SWAP ATOMIK: Timpa default.isar dengan snapshot yang dipulihkan
       await dbFile.writeAsBytes(backupBytes, flush: true);
 
-      // 3. Buka kembali instance Isar
-      await openIsar();
+      // 6. BUKA KEMBALI INSTANCE ISAR BARU & PERBARUI PROVIDER
+      try {
+        final newIsar = await openIsar();
+        onIsarRestored?.call(newIsar);
 
-      return const BackupRestoreResult(
-        isSuccess: true,
-        message: 'Data berhasil dipulihkan secara penuh.',
-      );
+        // Bersihkan file backup darurat dan staging jika sukses
+        if (await backupFile.exists()) {
+          await backupFile.delete();
+        }
+        if (await stagedFile.exists()) {
+          await stagedFile.delete();
+        }
+
+        return const BackupRestoreResult(
+          isSuccess: true,
+          message: 'Data berhasil dipulihkan secara penuh.',
+        );
+      } catch (openError) {
+        // 7. ROLLBACK OTOMATIS: Kembalikan file dari backup darurat jika pembukaan gagal
+        if (await backupFile.exists()) {
+          await backupFile.copy(dbPath);
+          await backupFile.delete();
+        }
+        if (await stagedFile.exists()) {
+          await stagedFile.delete();
+        }
+
+        final recovered = await openIsar();
+        onIsarRestored?.call(recovered);
+
+        return BackupRestoreResult(
+          isSuccess: false,
+          message: 'Gagal membuka database baru, data lama telah dipulihkan kembali: $openError',
+        );
+      }
     } catch (e) {
-      // Upayakan buka kembali database jika terjadi kesalahan
+      // Upayakan buka kembali database jika terjadi kesalahan tak terduga
       try {
         if (!_isar.isOpen) {
-          await openIsar();
+          final recovered = await openIsar();
+          onIsarRestored?.call(recovered);
         }
       } catch (_) {}
 
