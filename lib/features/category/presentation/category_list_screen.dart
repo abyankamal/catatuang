@@ -55,9 +55,10 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> with Si
                   .deleteCategory(category.id);
               if (!success && context.mounted) {
                 final error = ref.read(categoryControllerProvider).error;
+                final errorMsg = error?.toString().replaceAll(RegExp(r'^Exception:\s*'), '') ?? 'Gagal menghapus kategori';
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(error?.toString() ?? 'Gagal menghapus kategori'),
+                    content: Text(errorMsg),
                     backgroundColor: AppColors.expense,
                   ),
                 );

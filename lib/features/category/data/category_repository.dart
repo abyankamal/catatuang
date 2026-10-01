@@ -4,6 +4,7 @@ import 'package:isar/isar.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/database_provider.dart';
+import '../../budget/domain/budget.dart';
 import '../domain/category.dart';
 
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
@@ -61,12 +62,13 @@ class CategoryRepository {
     return category;
   }
 
-  /// Inisialisasi kategori standar jika belum ada
+  /// Inisialisasi kategori standar jika belum ada, atau pastikan kategori sistem (cat_transfer_fee) ada (Self-Healing)
   Future<void> seedDefaultCategoriesIfEmpty() async {
     final count = await _isar.categorys.count();
+    final now = DateTime.now();
+
     if (count == 0) {
       await _isar.writeTxn(() async {
-        final now = DateTime.now();
         final defaults = [
           // Expense Categories
           Category()
@@ -149,6 +151,34 @@ class CategoryRepository {
           await _isar.categorys.put(cat);
         }
       });
+    } else {
+      // Idempotent self-healing: pastikan kategori sistem (cat_transfer_fee) tetap tersedia
+      final existingTransferFee = await _isar.categorys
+          .filter()
+          .syncIdEqualTo('cat_transfer_fee')
+          .findFirst();
+
+      if (existingTransferFee == null) {
+        await _isar.writeTxn(() async {
+          final transferFeeCat = Category()
+            ..syncId = 'cat_transfer_fee'
+            ..name = 'Biaya Transfer'
+            ..type = 'EXPENSE'
+            ..icon = 'swap_horiz'
+            ..colorValue = 0xFF64748B
+            ..isActive = true
+            ..createdAt = now
+            ..updatedAt = now;
+          await _isar.categorys.put(transferFeeCat);
+        });
+      } else if (!existingTransferFee.isActive) {
+        // Jika terlanjur dinonaktifkan di masa lampau, pulihkan agar transfer fee tetap valid
+        await _isar.writeTxn(() async {
+          existingTransferFee.isActive = true;
+          existingTransferFee.updatedAt = now;
+          await _isar.categorys.put(existingTransferFee);
+        });
+      }
     }
   }
 
@@ -186,8 +216,33 @@ class CategoryRepository {
     final category = await _isar.categorys.get(id);
     if (category == null) throw Exception('Kategori tidak ditemukan');
 
+    // 1. Proteksi kategori sistem (AGENTS.md & Task 7)
+    if (category.syncId == 'cat_transfer_fee') {
+      throw Exception('Kategori sistem (Biaya Transfer) tidak dapat dinonaktifkan.');
+    }
+
+    // 2. Proteksi anggaran aktif bulan berjalan
+    final now = DateTime.now();
+    final activeBudget = await _isar.budgets
+        .filter()
+        .categorySyncIdEqualTo(category.syncId)
+        .and()
+        .yearEqualTo(now.year)
+        .and()
+        .monthEqualTo(now.month)
+        .and()
+        .isActiveEqualTo(true)
+        .findFirst();
+
+    if (activeBudget != null) {
+      throw Exception(
+        'Kategori "${category.name}" masih memiliki anggaran aktif untuk bulan ini. '
+        'Silakan hapus atau nonaktifkan anggaran kategori ini terlebih dahulu.',
+      );
+    }
+
     category.isActive = false;
-    category.updatedAt = DateTime.now();
+    category.updatedAt = now;
 
     await _isar.writeTxn(() async {
       await _isar.categorys.put(category);
