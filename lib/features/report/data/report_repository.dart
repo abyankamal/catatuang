@@ -101,8 +101,7 @@ class ReportRepository {
         .findAll();
 
     final categories = await _isar.categorys
-        .filter()
-        .isActiveEqualTo(true)
+        .where()
         .findAll();
 
     if (transactions.isEmpty) {
