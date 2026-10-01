@@ -120,16 +120,18 @@ class SettingsController extends StateNotifier<AsyncValue<void>> {
     }
   }
 
+  /// Memeriksa sisa detik lockout PIN dari database
+  Future<int> checkLockoutStatus() async {
+    return await _repo.checkLockoutStatus();
+  }
+
   Future<bool> verifyPin(String pin) async {
-    try {
-      final isValid = await _repo.verifyPin(pin);
-      if (isValid) {
-        _ref.read(isAppUnlockedProvider.notifier).state = true;
-      }
-      return isValid;
-    } catch (_) {
-      return false;
+    final isValid = await _repo.verifyPin(pin);
+    if (isValid) {
+      _ref.read(isAppUnlockedProvider.notifier).state = true;
     }
+    _ref.invalidate(appSettingsStreamProvider);
+    return isValid;
   }
 
   Future<bool> clearAllData() async {

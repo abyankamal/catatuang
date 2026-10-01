@@ -134,6 +134,8 @@ class AppSettingsRepository {
     settings.isPinEnabled = true;
     settings.pinSalt = salt;
     settings.pinHash = hash;
+    settings.failedPinAttempts = 0;
+    settings.lockedOutUntil = null;
     settings.updatedAt = DateTime.now();
 
     await _isar.writeTxn(() async {
@@ -147,6 +149,8 @@ class AppSettingsRepository {
     settings.isPinEnabled = false;
     settings.pinHash = null;
     settings.pinSalt = null;
+    settings.failedPinAttempts = 0;
+    settings.lockedOutUntil = null;
     settings.updatedAt = DateTime.now();
 
     await _isar.writeTxn(() async {
@@ -154,18 +158,88 @@ class AppSettingsRepository {
     });
   }
 
-  /// Verifikasi PIN yang dimasukkan
+  /// Memeriksa status lockout PIN secara persisten (Cold-Start & Runtime)
+  /// Mengembalikan sisa detik lockout jika masih terkunci, atau 0 jika bebas/tidak terkunci.
+  Future<int> checkLockoutStatus() async {
+    final settings = await getOrInitSettings();
+    if (!settings.isPinEnabled || settings.lockedOutUntil == null) {
+      return 0;
+    }
+
+    final now = DateTime.now();
+    if (now.isBefore(settings.lockedOutUntil!)) {
+      return settings.lockedOutUntil!.difference(now).inSeconds + 1;
+    }
+
+    // Waktu lockout sudah habis, bersihkan lockedOutUntil secara persisten
+    await _isar.writeTxn(() async {
+      settings.lockedOutUntil = null;
+      settings.updatedAt = now;
+      await _isar.appSettings.put(settings);
+    });
+
+    return 0;
+  }
+
+  /// Verifikasi PIN yang dimasukkan dengan rate limiting dan anti brute-force
   Future<bool> verifyPin(String enteredPin) async {
     final settings = await getOrInitSettings();
     if (!settings.isPinEnabled || settings.pinHash == null || settings.pinSalt == null) {
       return true; // Jika PIN tidak aktif, anggap valid
     }
 
-    return PinSecurityHelper.verifyPin(
+    final now = DateTime.now();
+
+    // 1. Cek apakah masih dalam masa lockout
+    if (settings.lockedOutUntil != null && now.isBefore(settings.lockedOutUntil!)) {
+      final remainingSeconds = settings.lockedOutUntil!.difference(now).inSeconds + 1;
+      throw Exception('Terlalu banyak percobaan salah. Coba lagi dalam $remainingSeconds detik.');
+    }
+
+    final isValid = PinSecurityHelper.verifyPin(
       enteredPin: enteredPin,
       storedHash: settings.pinHash!,
       storedSalt: settings.pinSalt!,
     );
+
+    if (isValid) {
+      // Reset counter kesalahan dan waktu lockout saat PIN benar
+      if (settings.failedPinAttempts > 0 || settings.lockedOutUntil != null) {
+        await _isar.writeTxn(() async {
+          settings.failedPinAttempts = 0;
+          settings.lockedOutUntil = null;
+          settings.updatedAt = now;
+          await _isar.appSettings.put(settings);
+        });
+      }
+      return true;
+    } else {
+      // Tambah counter kesalahan dan hitung batas lockout jika memenuhi threshold
+      final newAttempts = settings.failedPinAttempts + 1;
+      DateTime? newLockoutUntil;
+
+      if (newAttempts >= 8) {
+        // Salah 8 kali atau lebih: kunci 5 menit (300 detik)
+        newLockoutUntil = now.add(const Duration(minutes: 5));
+      } else if (newAttempts >= 5) {
+        // Salah 5 kali: kunci 30 detik
+        newLockoutUntil = now.add(const Duration(seconds: 30));
+      }
+
+      await _isar.writeTxn(() async {
+        settings.failedPinAttempts = newAttempts;
+        settings.lockedOutUntil = newLockoutUntil;
+        settings.updatedAt = now;
+        await _isar.appSettings.put(settings);
+      });
+
+      if (newLockoutUntil != null) {
+        final seconds = newLockoutUntil.difference(now).inSeconds;
+        throw Exception('Terlalu banyak percobaan salah. Coba lagi dalam $seconds detik.');
+      }
+
+      return false;
+    }
   }
 
   /// Reset/hapus seluruh isi database Isar secara instan

@@ -59,13 +59,20 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
 
     switch (widget.mode) {
       case PinLockMode.unlock:
-        final isValid = await controller.verifyPin(pin);
-        if (isValid) {
-          widget.onSuccess?.call();
-        } else {
+        try {
+          final isValid = await controller.verifyPin(pin);
+          if (isValid) {
+            widget.onSuccess?.call();
+          } else {
+            setState(() {
+              _enteredPin = '';
+              _errorMessage = 'PIN salah. Silakan coba lagi.';
+            });
+          }
+        } catch (e) {
           setState(() {
             _enteredPin = '';
-            _errorMessage = 'PIN salah. Silakan coba lagi.';
+            _errorMessage = e.toString().replaceAll(RegExp(r'^Exception:\s*'), '');
           });
         }
         break;

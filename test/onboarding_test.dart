@@ -69,6 +69,9 @@ class FakeAppSettingsRepository implements AppSettingsRepository {
   Future<bool> verifyPin(String enteredPin) async => true;
 
   @override
+  Future<int> checkLockoutStatus() async => 0;
+
+  @override
   Future<void> clearAllData() async {}
 }
 
