@@ -19,7 +19,7 @@ void main() async {
   runApp(
     ProviderScope(
       overrides: [
-        isarProvider.overrideWithValue(isar),
+        isarProvider.overrideWith((ref) => IsarStateNotifier(isar)),
       ],
       child: const CatatUangApp(),
     ),

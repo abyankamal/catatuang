@@ -11,7 +11,15 @@ import '../../features/settings/domain/app_settings.dart';
 import '../../features/transaction/domain/transaction.dart';
 import '../../features/wallet/domain/wallet.dart';
 
-final isarProvider = Provider<Isar>((ref) {
+class IsarStateNotifier extends StateNotifier<Isar> {
+  IsarStateNotifier(super.state);
+
+  void updateIsar(Isar newIsar) {
+    state = newIsar;
+  }
+}
+
+final isarProvider = StateNotifierProvider<IsarStateNotifier, Isar>((ref) {
   throw UnimplementedError(
     'isarProvider belum diinisialisasi. '
     'Pastikan openIsar() dipanggil sebelum runApp().',
