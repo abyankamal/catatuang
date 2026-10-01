@@ -27,53 +27,63 @@ const AppSettingsSchema = CollectionSchema(
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
-    r'hasCompletedOnboarding': PropertySchema(
+    r'failedPinAttempts': PropertySchema(
       id: 2,
+      name: r'failedPinAttempts',
+      type: IsarType.long,
+    ),
+    r'hasCompletedOnboarding': PropertySchema(
+      id: 3,
       name: r'hasCompletedOnboarding',
       type: IsarType.bool,
     ),
     r'isDebtReminderEnabled': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'isDebtReminderEnabled',
       type: IsarType.bool,
     ),
     r'isPinEnabled': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'isPinEnabled',
       type: IsarType.bool,
     ),
     r'isPrivacyScreenEnabled': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'isPrivacyScreenEnabled',
       type: IsarType.bool,
     ),
+    r'lockedOutUntil': PropertySchema(
+      id: 7,
+      name: r'lockedOutUntil',
+      type: IsarType.dateTime,
+    ),
     r'lockedUntil': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'lockedUntil',
       type: IsarType.dateTime,
     ),
     r'pinHash': PropertySchema(
-      id: 7,
+      id: 9,
       name: r'pinHash',
       type: IsarType.string,
     ),
     r'pinSalt': PropertySchema(
-      id: 8,
+      id: 10,
       name: r'pinSalt',
       type: IsarType.string,
     ),
     r'syncId': PropertySchema(
-      id: 9,
+      id: 11,
       name: r'syncId',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 10,
+      id: 12,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'userName': PropertySchema(
-      id: 11,
+      id: 13,
       name: r'userName',
       type: IsarType.string,
     )
@@ -148,16 +158,18 @@ void _appSettingsSerialize(
 ) {
   writer.writeString(offsets[0], object.avatarIcon);
   writer.writeDateTime(offsets[1], object.createdAt);
-  writer.writeBool(offsets[2], object.hasCompletedOnboarding);
-  writer.writeBool(offsets[3], object.isDebtReminderEnabled);
-  writer.writeBool(offsets[4], object.isPinEnabled);
-  writer.writeBool(offsets[5], object.isPrivacyScreenEnabled);
-  writer.writeDateTime(offsets[6], object.lockedUntil);
-  writer.writeString(offsets[7], object.pinHash);
-  writer.writeString(offsets[8], object.pinSalt);
-  writer.writeString(offsets[9], object.syncId);
-  writer.writeDateTime(offsets[10], object.updatedAt);
-  writer.writeString(offsets[11], object.userName);
+  writer.writeLong(offsets[2], object.failedPinAttempts);
+  writer.writeBool(offsets[3], object.hasCompletedOnboarding);
+  writer.writeBool(offsets[4], object.isDebtReminderEnabled);
+  writer.writeBool(offsets[5], object.isPinEnabled);
+  writer.writeBool(offsets[6], object.isPrivacyScreenEnabled);
+  writer.writeDateTime(offsets[7], object.lockedOutUntil);
+  writer.writeDateTime(offsets[8], object.lockedUntil);
+  writer.writeString(offsets[9], object.pinHash);
+  writer.writeString(offsets[10], object.pinSalt);
+  writer.writeString(offsets[11], object.syncId);
+  writer.writeDateTime(offsets[12], object.updatedAt);
+  writer.writeString(offsets[13], object.userName);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -169,17 +181,19 @@ AppSettings _appSettingsDeserialize(
   final object = AppSettings();
   object.avatarIcon = reader.readStringOrNull(offsets[0]);
   object.createdAt = reader.readDateTime(offsets[1]);
-  object.hasCompletedOnboarding = reader.readBool(offsets[2]);
+  object.failedPinAttempts = reader.readLong(offsets[2]);
+  object.hasCompletedOnboarding = reader.readBool(offsets[3]);
   object.id = id;
-  object.isDebtReminderEnabled = reader.readBool(offsets[3]);
-  object.isPinEnabled = reader.readBool(offsets[4]);
-  object.isPrivacyScreenEnabled = reader.readBool(offsets[5]);
-  object.lockedUntil = reader.readDateTimeOrNull(offsets[6]);
-  object.pinHash = reader.readStringOrNull(offsets[7]);
-  object.pinSalt = reader.readStringOrNull(offsets[8]);
-  object.syncId = reader.readString(offsets[9]);
-  object.updatedAt = reader.readDateTime(offsets[10]);
-  object.userName = reader.readStringOrNull(offsets[11]);
+  object.isDebtReminderEnabled = reader.readBool(offsets[4]);
+  object.isPinEnabled = reader.readBool(offsets[5]);
+  object.isPrivacyScreenEnabled = reader.readBool(offsets[6]);
+  object.lockedOutUntil = reader.readDateTimeOrNull(offsets[7]);
+  object.lockedUntil = reader.readDateTimeOrNull(offsets[8]);
+  object.pinHash = reader.readStringOrNull(offsets[9]);
+  object.pinSalt = reader.readStringOrNull(offsets[10]);
+  object.syncId = reader.readString(offsets[11]);
+  object.updatedAt = reader.readDateTime(offsets[12]);
+  object.userName = reader.readStringOrNull(offsets[13]);
   return object;
 }
 
@@ -195,7 +209,7 @@ P _appSettingsDeserializeProp<P>(
     case 1:
       return (reader.readDateTime(offset)) as P;
     case 2:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 3:
       return (reader.readBool(offset)) as P;
     case 4:
@@ -203,16 +217,20 @@ P _appSettingsDeserializeProp<P>(
     case 5:
       return (reader.readBool(offset)) as P;
     case 6:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 7:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 8:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 9:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 10:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 11:
+      return (reader.readString(offset)) as P;
+    case 12:
+      return (reader.readDateTime(offset)) as P;
+    case 13:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -623,6 +641,62 @@ extension AppSettingsQueryFilter
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      failedPinAttemptsEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'failedPinAttempts',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      failedPinAttemptsGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'failedPinAttempts',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      failedPinAttemptsLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'failedPinAttempts',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      failedPinAttemptsBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'failedPinAttempts',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
       hasCompletedOnboardingEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -711,6 +785,80 @@ extension AppSettingsQueryFilter
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isPrivacyScreenEnabled',
         value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lockedOutUntilIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'lockedOutUntil',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lockedOutUntilIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'lockedOutUntil',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lockedOutUntilEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lockedOutUntil',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lockedOutUntilGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'lockedOutUntil',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lockedOutUntilLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'lockedOutUntil',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      lockedOutUntilBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'lockedOutUntil',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
       ));
     });
   }
@@ -1470,6 +1618,20 @@ extension AppSettingsQuerySortBy
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByFailedPinAttempts() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'failedPinAttempts', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByFailedPinAttemptsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'failedPinAttempts', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       sortByHasCompletedOnboarding() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hasCompletedOnboarding', Sort.asc);
@@ -1521,6 +1683,19 @@ extension AppSettingsQuerySortBy
       sortByIsPrivacyScreenEnabledDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isPrivacyScreenEnabled', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByLockedOutUntil() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lockedOutUntil', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByLockedOutUntilDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lockedOutUntil', Sort.desc);
     });
   }
 
@@ -1624,6 +1799,20 @@ extension AppSettingsQuerySortThenBy
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByFailedPinAttempts() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'failedPinAttempts', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByFailedPinAttemptsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'failedPinAttempts', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       thenByHasCompletedOnboarding() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hasCompletedOnboarding', Sort.asc);
@@ -1687,6 +1876,19 @@ extension AppSettingsQuerySortThenBy
       thenByIsPrivacyScreenEnabledDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isPrivacyScreenEnabled', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByLockedOutUntil() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lockedOutUntil', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByLockedOutUntilDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lockedOutUntil', Sort.desc);
     });
   }
 
@@ -1779,6 +1981,13 @@ extension AppSettingsQueryWhereDistinct
   }
 
   QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByFailedPinAttempts() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'failedPinAttempts');
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
       distinctByHasCompletedOnboarding() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'hasCompletedOnboarding');
@@ -1802,6 +2011,12 @@ extension AppSettingsQueryWhereDistinct
       distinctByIsPrivacyScreenEnabled() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isPrivacyScreenEnabled');
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByLockedOutUntil() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'lockedOutUntil');
     });
   }
 
@@ -1866,6 +2081,12 @@ extension AppSettingsQueryProperty
     });
   }
 
+  QueryBuilder<AppSettings, int, QQueryOperations> failedPinAttemptsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'failedPinAttempts');
+    });
+  }
+
   QueryBuilder<AppSettings, bool, QQueryOperations>
       hasCompletedOnboardingProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -1890,6 +2111,13 @@ extension AppSettingsQueryProperty
       isPrivacyScreenEnabledProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isPrivacyScreenEnabled');
+    });
+  }
+
+  QueryBuilder<AppSettings, DateTime?, QQueryOperations>
+      lockedOutUntilProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'lockedOutUntil');
     });
   }
 

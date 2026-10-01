@@ -23,6 +23,8 @@ class AppSettings {
   bool isPinEnabled = false;           // Flag status penguncian aplikasi dengan PIN 6-digit
   String? pinHash;                     // Hash SHA-256 dari PIN yang tersimpan
   String? pinSalt;                     // Salt acak untuk pengamanan hash PIN
+  int failedPinAttempts = 0;           // Jumlah percobaan PIN salah beruntun
+  DateTime? lockedOutUntil;            // Batas waktu penguncian sementara akibat brute-force attempt
 
   late DateTime createdAt;
   late DateTime updatedAt;
