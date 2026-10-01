@@ -2,11 +2,13 @@ import 'package:catatuang/core/utils/pin_security_helper.dart';
 import 'package:catatuang/core/widgets/privacy_screen_wrapper.dart';
 import 'package:catatuang/features/auth/presentation/pin_lock_screen.dart';
 import 'package:catatuang/features/settings/application/settings_providers.dart';
+import 'package:catatuang/features/settings/data/app_settings_repository.dart';
 import 'package:catatuang/features/settings/domain/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:isar/isar.dart';
 
 void main() {
   setUpAll(() async {
@@ -137,5 +139,80 @@ void main() {
       // PinLockScreen should be visible on top
       expect(find.text('Buka Kunci Aplikasi'), findsOneWidget);
     });
+
+    testWidgets('PinLockScreen disables keypad and displays countdown message when locked out on launch', (tester) async {
+      final lockedSettings = AppSettings()
+        ..id = 1
+        ..syncId = 'settings_locked'
+        ..isPinEnabled = true
+        ..pinHash = PinSecurityHelper.hashPin('123456', 'salt')
+        ..pinSalt = 'salt'
+        ..failedPinAttempts = 5
+        ..lockedOutUntil = DateTime.now().add(const Duration(seconds: 3))
+        ..createdAt = DateTime.now()
+        ..updatedAt = DateTime.now();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appSettingsStreamProvider.overrideWith((ref) => Stream.value(lockedSettings)),
+            appSettingsRepositoryProvider.overrideWithValue(
+              _MockLockoutAppSettingsRepository(lockoutRemainingSeconds: 3),
+            ),
+          ],
+          child: const MaterialApp(
+            home: PinLockScreen(mode: PinLockMode.unlock),
+          ),
+        ),
+      );
+
+      // Selesaikan post frame callback
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Notice lockout harus muncul
+      expect(find.textContaining('Terlalu banyak percobaan salah'), findsOneWidget);
+      expect(find.textContaining('Coba lagi dalam'), findsOneWidget);
+
+      // Mencoba mengetuk keypad saat locked out tidak boleh menambah digit
+      await tester.tap(find.text('1'));
+      await tester.pump();
+
+      // Memajukan waktu 3 detik agar countdown selesai
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
+
+      // Notice lockout harus hilang dan keypad dapat digunakan kembali
+      expect(find.textContaining('Terlalu banyak percobaan salah'), findsNothing);
+
+      // Ketuk 1 berhasil masuk
+      await tester.tap(find.text('1'));
+      await tester.pump();
+    });
   });
+}
+
+class _MockLockoutAppSettingsRepository extends AppSettingsRepository {
+  int lockoutRemainingSeconds;
+  _MockLockoutAppSettingsRepository({required this.lockoutRemainingSeconds}) : super(_FakeIsar());
+
+  @override
+  Future<int> checkLockoutStatus() async {
+    return lockoutRemainingSeconds;
+  }
+
+  @override
+  Future<bool> verifyPin(String enteredPin) async {
+    if (lockoutRemainingSeconds > 0) {
+      throw Exception('Terlalu banyak percobaan salah. Coba lagi dalam $lockoutRemainingSeconds detik.');
+    }
+    return enteredPin == '123456';
+  }
+}
+
+class _FakeIsar implements Isar {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

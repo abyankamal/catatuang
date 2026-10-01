@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -32,8 +33,64 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
   String _tempNewPin = '';
   String? _errorMessage;
   int _step = 1; // 1: Input / Old PIN, 2: New PIN / Confirm, 3: Confirm New PIN
+  int _lockoutSeconds = 0;
+  Timer? _countdownTimer;
+
+  bool get _isLockedOut => _lockoutSeconds > 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkInitialLockout();
+    });
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkInitialLockout() async {
+    try {
+      final remaining = await ref.read(settingsControllerProvider.notifier).checkLockoutStatus();
+      if (remaining > 0 && mounted) {
+        _startLockoutCountdown(remaining);
+      }
+    } catch (_) {}
+  }
+
+  void _startLockoutCountdown(int seconds) {
+    _countdownTimer?.cancel();
+    setState(() {
+      _lockoutSeconds = seconds;
+      _errorMessage = 'Terlalu banyak percobaan salah. Coba lagi dalam $_lockoutSeconds detik.';
+    });
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      if (_lockoutSeconds <= 1) {
+        timer.cancel();
+        setState(() {
+          _lockoutSeconds = 0;
+          _errorMessage = null;
+        });
+      } else {
+        setState(() {
+          _lockoutSeconds--;
+          _errorMessage = 'Terlalu banyak percobaan salah. Coba lagi dalam $_lockoutSeconds detik.';
+        });
+      }
+    });
+  }
 
   void _onNumberPressed(String number) {
+    if (_isLockedOut) return;
     if (_enteredPin.length >= 6) return;
 
     setState(() {
@@ -47,6 +104,7 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
   }
 
   void _onBackspacePressed() {
+    if (_isLockedOut) return;
     if (_enteredPin.isEmpty) return;
     setState(() {
       _errorMessage = null;
@@ -70,10 +128,22 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
             });
           }
         } catch (e) {
-          setState(() {
-            _enteredPin = '';
-            _errorMessage = e.toString().replaceAll(RegExp(r'^Exception:\s*'), '');
-          });
+          final errorText = e.toString().replaceAll(RegExp(r'^Exception:\s*'), '');
+          // Cek apakah pesan berisi informasi detik lockout
+          final match = RegExp(r'(\d+)\s+detik').firstMatch(errorText);
+          final seconds = match != null ? int.tryParse(match.group(1)!) : null;
+
+          if (seconds != null && seconds > 0) {
+            setState(() {
+              _enteredPin = '';
+            });
+            _startLockoutCountdown(seconds);
+          } else {
+            setState(() {
+              _enteredPin = '';
+              _errorMessage = errorText;
+            });
+          }
         }
         break;
 
@@ -261,18 +331,22 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
               const SizedBox(height: 16),
 
               // Error Message
-              SizedBox(
-                height: 24,
-                child: _errorMessage != null
-                    ? Text(
-                        _errorMessage!,
-                        style: GoogleFonts.hankenGrotesk(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.expense,
-                        ),
-                      )
-                    : null,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: SizedBox(
+                  height: 38,
+                  child: _errorMessage != null
+                      ? Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.hankenGrotesk(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.expense,
+                          ),
+                        )
+                      : null,
+                ),
               ),
 
               const Spacer(flex: 2),
@@ -306,11 +380,11 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
               width: 72,
               height: 72,
               child: IconButton(
-                onPressed: _onBackspacePressed,
-                icon: const Icon(
+                onPressed: _isLockedOut ? null : _onBackspacePressed,
+                icon: Icon(
                   Icons.backspace_outlined,
                   size: 26,
-                  color: AppColors.secondary,
+                  color: _isLockedOut ? Colors.grey.shade400 : AppColors.secondary,
                 ),
               ),
             ),
@@ -329,11 +403,11 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
 
   Widget _buildKeypadButton(String number) {
     return Material(
-      color: Colors.grey.shade100,
+      color: _isLockedOut ? Colors.grey.shade50 : Colors.grey.shade100,
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
-        onTap: () => _onNumberPressed(number),
+        onTap: _isLockedOut ? null : () => _onNumberPressed(number),
         child: Container(
           width: 72,
           height: 72,
@@ -343,7 +417,7 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
             style: GoogleFonts.manrope(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: AppColors.secondary,
+              color: _isLockedOut ? Colors.grey.shade400 : AppColors.secondary,
             ),
           ),
         ),
