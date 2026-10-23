@@ -7,6 +7,7 @@ import 'package:isar/isar.dart';
 import '../../../core/database/database_provider.dart';
 import '../../contact/domain/contact.dart';
 import '../../debt/domain/debt.dart';
+import '../../transaction/domain/recurring_transaction.dart';
 import '../domain/app_notification.dart';
 
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
@@ -79,6 +80,96 @@ class NotificationRepository {
           contact: contact,
           dueDate: debt.dueDate!,
           remainingAmount: r.remainingAmount,
+        ),
+      );
+    }
+
+    return results;
+  }
+
+  /// Mengambil semua pengingat aktif (utang, piutang, dan transaksi berulang manual yang jatuh tempo)
+  Future<List<AppNotificationItem>> getActiveReminders({
+    bool includeDebt = true,
+    bool includeRecurring = true,
+  }) async {
+    final results = <AppNotificationItem>[];
+
+    if (includeDebt) {
+      final debts = await getActiveDebtReminders();
+      results.addAll(debts);
+    }
+
+    if (includeRecurring) {
+      final recurring = await getActiveRecurringReminders();
+      results.addAll(recurring);
+    }
+
+    results.sort((a, b) {
+      final urgencyOrder = {
+        NotificationUrgency.overdue: 0,
+        NotificationUrgency.dueToday: 1,
+        NotificationUrgency.upcoming: 2,
+      };
+      final orderDiff = urgencyOrder[a.urgency]!.compareTo(urgencyOrder[b.urgency]!);
+      if (orderDiff != 0) return orderDiff;
+      return a.dueDate.compareTo(b.dueDate);
+    });
+
+    return results;
+  }
+
+  /// Mengambil daftar transaksi rutin manual (autoExecute == false) yang telah jatuh tempo
+  Future<List<AppNotificationItem>> getActiveRecurringReminders() async {
+    final now = DateTime.now();
+    final recurringList = await _isar.recurringTransactions
+        .filter()
+        .isActiveEqualTo(true)
+        .and()
+        .autoExecuteEqualTo(false)
+        .and()
+        .nextDueDateLessThan(now.add(const Duration(seconds: 1)))
+        .sortByNextDueDate()
+        .findAll();
+
+    if (recurringList.isEmpty) return const [];
+
+    final today = DateTime(now.year, now.month, now.day);
+    final results = <AppNotificationItem>[];
+
+    for (final r in recurringList) {
+      final dueDate = r.nextDueDate;
+      final dueDay = DateTime(dueDate.year, dueDate.month, dueDate.day);
+      final diffDays = dueDay.difference(today).inDays;
+
+      final NotificationUrgency urgency;
+      final String notifTitle;
+      final String notifMessage;
+      final desc = (r.description != null && r.description!.trim().isNotEmpty)
+          ? r.description!
+          : (r.type == 'INCOME'
+              ? 'Pemasukan Rutin'
+              : (r.type == 'TRANSFER' ? 'Transfer Rutin' : 'Pengeluaran Rutin'));
+
+      if (diffDays < 0) {
+        urgency = NotificationUrgency.overdue;
+        notifTitle = 'Transaksi Rutin Terlewat';
+        notifMessage = 'Jadwal "$desc" sudah lewat ${diffDays.abs()} hari.';
+      } else {
+        urgency = NotificationUrgency.dueToday;
+        notifTitle = 'Transaksi Rutin Hari Ini';
+        notifMessage = 'Saatnya mencatat jadwal "$desc" hari ini.';
+      }
+
+      results.add(
+        AppNotificationItem(
+          id: 'recurring_reminder_${r.syncId}',
+          title: notifTitle,
+          message: notifMessage,
+          type: 'RECURRING',
+          urgency: urgency,
+          recurring: r,
+          dueDate: dueDate,
+          remainingAmount: r.amount,
         ),
       );
     }

@@ -2,20 +2,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../debt/application/debt_providers.dart';
 import '../../settings/application/settings_providers.dart';
+import '../../transaction/application/recurring_transaction_controller.dart';
 import '../data/notification_repository.dart';
 import '../domain/app_notification.dart';
 
 final activeRemindersProvider = FutureProvider.autoDispose<List<AppNotificationItem>>((ref) async {
   final settings = ref.watch(appSettingsStreamProvider).valueOrNull;
-  final isEnabled = settings?.isDebtReminderEnabled ?? true;
+  final isDebtEnabled = settings?.isDebtReminderEnabled ?? true;
 
-  if (!isEnabled) return const [];
-
-  // Watch debts stream to automatically refresh reminders when debt collection changes
+  // Watch streams to automatically refresh reminders when collections change
   ref.watch(activeDebtsStreamProvider);
+  ref.watch(activeRecurringStreamProvider);
 
   final repo = ref.watch(notificationRepositoryProvider);
-  return await repo.getActiveDebtReminders();
+  return await repo.getActiveReminders(
+    includeDebt: isDebtEnabled,
+    includeRecurring: true,
+  );
 });
 
 final unreadRemindersCountProvider = Provider.autoDispose<int>((ref) {

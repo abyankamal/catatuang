@@ -6,6 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../transaction/application/recurring_transaction_controller.dart';
+import '../../../transaction/domain/recurring_transaction.dart';
 import '../../application/notification_providers.dart';
 import '../../domain/app_notification.dart';
 
@@ -41,6 +43,181 @@ class NotificationSheet extends ConsumerWidget {
       case NotificationUrgency.upcoming:
         return 'MENDATANG';
     }
+  }
+
+  Future<void> _showConfirmRecurringDialog(
+    BuildContext context,
+    WidgetRef ref,
+    RecurringTransaction recurring,
+  ) async {
+    final formKey = GlobalKey<FormState>();
+    final amountController = TextEditingController(
+      text: recurring.amount.toInt() == recurring.amount
+          ? recurring.amount.toInt().toString()
+          : recurring.amount.toString(),
+    );
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.edit_calendar_rounded,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Catat Transaksi Rutin',
+                  style: GoogleFonts.manrope(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.secondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  recurring.description?.isNotEmpty == true
+                      ? recurring.description!
+                      : 'Transaksi Terjadwal',
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.secondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Jatuh tempo: ${DateFormatter.formatFullDate(recurring.nextDueDate)}',
+                  style: GoogleFonts.hankenGrotesk(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: amountController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Nominal',
+                    prefixText: 'Rp ',
+                    helperText: 'Sesuaikan nominal jika terdapat perubahan tagihan.',
+                    helperMaxLines: 2,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Nominal tidak boleh kosong';
+                    }
+                    final parsed = double.tryParse(value.replaceAll('.', '').replaceAll(',', '.'));
+                    if (parsed == null || parsed <= 0) {
+                      return 'Nominal harus lebih dari 0';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                'Batal',
+                style: GoogleFonts.manrope(color: Colors.grey.shade600),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                final success = await ref
+                    .read(recurringTransactionControllerProvider.notifier)
+                    .skipCurrentCycle(recurring.syncId);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        success
+                            ? 'Siklus transaksi berhasil dilewati.'
+                            : 'Gagal melewati siklus.',
+                      ),
+                      backgroundColor: success ? AppColors.secondary : AppColors.expense,
+                    ),
+                  );
+                }
+              },
+              child: Text(
+                'Lewati',
+                style: GoogleFonts.manrope(color: Colors.orange.shade800),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () async {
+                if (!formKey.currentState!.validate()) return;
+                final parsed = double.parse(
+                  amountController.text.replaceAll('.', '').replaceAll(',', '.'),
+                );
+                Navigator.pop(dialogContext);
+
+                final success = await ref
+                    .read(recurringTransactionControllerProvider.notifier)
+                    .confirmExecution(
+                      recurring.syncId,
+                      customAmount: parsed,
+                    );
+
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        success
+                            ? 'Transaksi rutin berhasil dicatat!'
+                            : 'Gagal mencatat transaksi rutin.',
+                      ),
+                      backgroundColor: success ? AppColors.income : AppColors.expense,
+                    ),
+                  );
+                }
+              },
+              child: Text(
+                'Catat Sekarang',
+                style: GoogleFonts.manrope(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -104,7 +281,7 @@ class NotificationSheet extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        'Jatuh tempo utang & tagihan piutang',
+                        'Pengingat transaksi rutin, utang & piutang',
                         style: GoogleFonts.hankenGrotesk(
                           fontSize: 12,
                           color: Colors.grey.shade600,
@@ -158,7 +335,7 @@ class NotificationSheet extends ConsumerWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Tidak ada kewajiban utang atau penagihan piutang yang mendesak saat ini.',
+                            'Tidak ada jadwal transaksi rutin atau kewajiban utang piutang yang mendesak saat ini.',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.hankenGrotesk(
                               fontSize: 13,
@@ -178,12 +355,17 @@ class NotificationSheet extends ConsumerWidget {
                   itemBuilder: (context, index) {
                     final item = reminders[index];
                     final urgencyColor = _getUrgencyColor(item.urgency);
+                    final isRecurring = item.isRecurring;
                     final isPayable = item.type == 'PAYABLE';
 
                     return InkWell(
                       onTap: () {
-                        Navigator.pop(context);
-                        context.push('/debts');
+                        if (isRecurring && item.recurring != null) {
+                          _showConfirmRecurringDialog(context, ref, item.recurring!);
+                        } else {
+                          Navigator.pop(context);
+                          context.push('/debts');
+                        }
                       },
                       borderRadius: BorderRadius.circular(18),
                       child: Container(
@@ -270,7 +452,13 @@ class NotificationSheet extends ConsumerWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Sisa Tagihan',
+                                      isRecurring
+                                          ? (item.recurring?.type == 'INCOME'
+                                              ? 'Nominal Pemasukan'
+                                              : (item.recurring?.type == 'TRANSFER'
+                                                  ? 'Nominal Transfer'
+                                                  : 'Nominal Tagihan'))
+                                          : 'Sisa Tagihan',
                                       style: GoogleFonts.hankenGrotesk(
                                         fontSize: 10,
                                         color: Colors.grey.shade500,
@@ -281,33 +469,62 @@ class NotificationSheet extends ConsumerWidget {
                                       style: GoogleFonts.manrope(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
-                                        color: isPayable ? AppColors.expense : AppColors.income,
+                                        color: isRecurring
+                                            ? (item.recurring?.type == 'INCOME'
+                                                ? AppColors.income
+                                                : AppColors.expense)
+                                            : (isPayable ? AppColors.expense : AppColors.income),
                                       ),
                                     ),
                                   ],
                                 ),
-                                TextButton.icon(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    context.push('/debts');
-                                  },
-                                  icon: const Icon(Icons.arrow_forward_rounded, size: 14),
-                                  label: Text(
-                                    isPayable ? 'Bayar' : 'Tagih',
-                                    style: GoogleFonts.manrope(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
+                                if (isRecurring)
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      if (item.recurring != null) {
+                                        _showConfirmRecurringDialog(context, ref, item.recurring!);
+                                      }
+                                    },
+                                    icon: const Icon(Icons.check_circle_outline_rounded, size: 14),
+                                    label: Text(
+                                      'Catat Sekarang',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: AppColors.primary,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      context.push('/debts');
+                                    },
+                                    icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                                    label: Text(
+                                      isPayable ? 'Bayar' : 'Tagih',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: AppColors.primary,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
                                     ),
                                   ),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: AppColors.primary,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    backgroundColor: AppColors.primary.withValues(alpha: 0.08),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                ),
                               ],
                             ),
                           ],
@@ -330,3 +547,4 @@ class NotificationSheet extends ConsumerWidget {
     );
   }
 }
+

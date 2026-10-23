@@ -1,5 +1,6 @@
 import '../../contact/domain/contact.dart';
 import '../../debt/domain/debt.dart';
+import '../../transaction/domain/recurring_transaction.dart';
 
 enum NotificationUrgency {
   overdue, // Jatuh tempo sudah terlewat (Merah Pekat)
@@ -11,11 +12,12 @@ class AppNotificationItem {
   final String id;
   final String title;
   final String message;
-  final String type; // 'PAYABLE' atau 'RECEIVABLE'
+  final String type; // 'PAYABLE', 'RECEIVABLE', atau 'RECURRING'
   final NotificationUrgency urgency;
-  final int debtId;
-  final Debt debt;
+  final int? debtId;
+  final Debt? debt;
   final Contact? contact;
+  final RecurringTransaction? recurring;
   final DateTime dueDate;
   final double remainingAmount;
 
@@ -25,10 +27,15 @@ class AppNotificationItem {
     required this.message,
     required this.type,
     required this.urgency,
-    required this.debtId,
-    required this.debt,
+    this.debtId,
+    this.debt,
     this.contact,
+    this.recurring,
     required this.dueDate,
     required this.remainingAmount,
   });
+
+  bool get isRecurring => type == 'RECURRING' || recurring != null;
+  bool get isPayable => type == 'PAYABLE';
+  bool get isReceivable => type == 'RECEIVABLE';
 }
