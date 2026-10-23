@@ -220,7 +220,28 @@ class RecurringTransactionRepository {
       throw Exception('Dompet sumber telah dinonaktifkan.');
     }
 
-    // 2. Periksa periode tutup buku (AGENTS.md §4) & transisi aman
+    // 2. Jika bertipe TRANSFER, periksa dompet tujuan dan cari kategori biaya transfer sebelum transaksi penulisan
+    Wallet? destWallet;
+    String? feeCatSyncId;
+    final adminFee = recurring.adminFee ?? 0.0;
+
+    if (recurring.type == 'TRANSFER') {
+      destWallet = await _isar.wallets
+          .filter()
+          .syncIdEqualTo(recurring.targetWalletSyncId ?? '')
+          .findFirst();
+
+      if (destWallet == null || !destWallet.isActive) {
+        throw Exception('Dompet tujuan transfer tidak ditemukan atau tidak aktif.');
+      }
+
+      if (adminFee > 0) {
+        final feeCat = await _isar.categorys.filter().syncIdEqualTo('cat_transfer_fee').findFirst();
+        feeCatSyncId = feeCat?.syncId;
+      }
+    }
+
+    // 3. Periksa periode tutup buku (AGENTS.md §4) & transisi aman
     final settings = await _isar.appSettings.where().findFirst();
     final lockedUntil = settings?.lockedUntil;
     DateTime effectiveDate = executionDate;
@@ -284,16 +305,7 @@ class RecurringTransactionRepository {
 
         await _isar.transactions.put(primaryTx);
       } else if (recurring.type == 'TRANSFER') {
-        final destWallet = await _isar.wallets
-            .filter()
-            .syncIdEqualTo(recurring.targetWalletSyncId ?? '')
-            .findFirst();
-
-        if (destWallet == null || !destWallet.isActive) {
-          throw Exception('Dompet tujuan transfer tidak ditemukan atau tidak aktif.');
-        }
-
-        final adminFee = recurring.adminFee ?? 0.0;
+        final target = destWallet!;
 
         // Potong saldo dompet sumber (nominal + biaya admin)
         sourceWallet.balance -= (finalAmount + adminFee);
@@ -301,22 +313,15 @@ class RecurringTransactionRepository {
         await _isar.wallets.put(sourceWallet);
 
         // Tambah saldo dompet tujuan
-        destWallet.balance += finalAmount;
-        destWallet.updatedAt = now;
-        await _isar.wallets.put(destWallet);
+        target.balance += finalAmount;
+        target.updatedAt = now;
+        await _isar.wallets.put(target);
 
         final groupId = _uuid.v4();
 
-        // Cari kategori transfer fee jika ada admin fee (AGENTS.md §4)
-        String? feeCatSyncId;
-        if (adminFee > 0) {
-          final feeCat = await _isar.categorys.filter().syncIdEqualTo('cat_transfer_fee').findFirst();
-          feeCatSyncId = feeCat?.syncId;
-        }
-
         final outDesc = recurring.description != null && recurring.description!.isNotEmpty
-            ? 'Transfer ke ${destWallet.name} (${recurring.description})$auditNote'
-            : 'Transfer ke ${destWallet.name}$auditNote';
+            ? 'Transfer ke ${target.name} (${recurring.description})$auditNote'
+            : 'Transfer ke ${target.name}$auditNote';
 
         final inDesc = recurring.description != null && recurring.description!.isNotEmpty
             ? 'Transfer dari ${sourceWallet.name} (${recurring.description})$auditNote'
@@ -341,7 +346,7 @@ class RecurringTransactionRepository {
           ..type = 'TRANSFER_IN'
           ..amount = finalAmount
           ..date = effectiveDate
-          ..walletSyncId = destWallet.syncId
+          ..walletSyncId = target.syncId
           ..recurringSyncId = recurring.syncId
           ..transactionGroupId = groupId
           ..description = inDesc
@@ -362,7 +367,7 @@ class RecurringTransactionRepository {
             ..categorySyncId = feeCatSyncId
             ..recurringSyncId = recurring.syncId
             ..transactionGroupId = groupId
-            ..description = 'Biaya Transfer ke ${destWallet.name}$auditNote'
+            ..description = 'Biaya Transfer ke ${target.name}$auditNote'
             ..createdAt = now
             ..updatedAt = now;
 
