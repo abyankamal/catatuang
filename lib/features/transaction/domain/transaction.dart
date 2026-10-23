@@ -31,6 +31,9 @@ class Transaction {
   @Index()
   String? debtSyncId;             // Referensi ke Debt.syncId (jika terkait utang/piutang)
   
+  @Index()
+  String? recurringSyncId;        // Referensi ke RecurringTransaction.syncId jika dihasilkan dari jadwal
+  
   late DateTime createdAt;
   late DateTime updatedAt;
 
@@ -46,6 +49,7 @@ class Transaction {
       'categorySyncId': categorySyncId,
       'transactionGroupId': transactionGroupId,
       'debtSyncId': debtSyncId,
+      'recurringSyncId': recurringSyncId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };

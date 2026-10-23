@@ -8,6 +8,7 @@ import '../../features/category/domain/category.dart';
 import '../../features/contact/domain/contact.dart';
 import '../../features/debt/domain/debt.dart';
 import '../../features/settings/domain/app_settings.dart';
+import '../../features/transaction/domain/recurring_transaction.dart';
 import '../../features/transaction/domain/transaction.dart';
 import '../../features/wallet/domain/wallet.dart';
 
@@ -32,6 +33,7 @@ const isarSchemas = [
   ContactSchema,
   DebtSchema,
   TransactionSchema,
+  RecurringTransactionSchema,
   AppSettingsSchema,
   BudgetSchema,
 ];
