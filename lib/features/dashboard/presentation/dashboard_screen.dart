@@ -9,8 +9,10 @@ import '../../category/domain/category.dart';
 import '../../debt/application/debt_providers.dart';
 import '../../notification/application/notification_providers.dart';
 import '../../notification/presentation/widgets/notification_sheet.dart';
+import '../../transaction/application/recurring_transaction_controller.dart';
 import '../../wallet/domain/wallet.dart';
 import '../application/dashboard_providers.dart';
+import 'widgets/due_recurring_banner.dart';
 import 'widgets/expense_focus_card.dart';
 import 'widgets/hero_balance_card.dart';
 import 'widgets/transaction_list_tile.dart';
@@ -23,6 +25,19 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        ref.read(recurringTransactionControllerProvider.notifier).processDueAutoTransactions();
+      } catch (_) {
+        // Abaikan jika controller/database belum diinisialisasi di mock widget test
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final summaryAsync = ref.watch(dashboardSummaryProvider);
@@ -60,6 +75,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ref.invalidate(recentTransactionsStreamProvider);
             ref.invalidate(dashboardExpenseFocusProvider);
             ref.invalidate(debtSummaryProvider);
+            ref.invalidate(dueManualRecurringProvider);
+            await ref.read(recurringTransactionControllerProvider.notifier).processDueAutoTransactions();
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -114,6 +131,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // Due Recurring Scheduled Transactions Banner
+                    const DueRecurringBanner(),
 
                     // Debt & Receivable Quick Overview Banner
                     _buildDebtQuickBanner(debtSummaryAsync),
