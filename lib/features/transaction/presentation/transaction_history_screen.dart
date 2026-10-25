@@ -495,6 +495,11 @@ class TransactionHistoryScreen extends ConsumerWidget {
         centerTitle: false,
         actions: [
           IconButton(
+            icon: const Icon(Icons.event_repeat_rounded, color: AppColors.secondary),
+            tooltip: 'Transaksi Terjadwal',
+            onPressed: () => context.push('/recurring-transactions'),
+          ),
+          IconButton(
             icon: const Icon(Icons.search_rounded, color: AppColors.secondary),
             tooltip: 'Cari Transaksi',
             onPressed: () => context.push('/search'),

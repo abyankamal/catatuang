@@ -435,5 +435,127 @@ void main() {
       expect(updated?.occurrenceCount, equals(1));
       expect(updated?.isActive, isFalse); // Completed and deactivated
     });
+
+    test('toggleActive(false) pauses schedule without changing nextDueDate', () async {
+      final wallet = Wallet()
+        ..syncId = 'wallet_pause_test'
+        ..name = 'BCA'
+        ..balance = 500000
+        ..isActive = true
+        ..createdAt = DateTime.now()
+        ..updatedAt = DateTime.now();
+      await isar.writeTxn(() => isar.wallets.put(wallet));
+
+      final recurring = await repository.createRecurring(
+        type: 'EXPENSE',
+        amount: 25000,
+        walletSyncId: 'wallet_pause_test',
+        frequency: 'DAILY',
+        startDate: DateTime(2026, 11, 1),
+      );
+
+      await repository.toggleActive(recurring.syncId, false);
+
+      final updated = await repository.getBySyncId(recurring.syncId);
+      expect(updated?.isActive, isFalse);
+      expect(updated?.nextDueDate, equals(DateTime(2026, 11, 1)));
+    });
+
+    test('toggleActive(true) advances past nextDueDate without backlog catch-up', () async {
+      final wallet = Wallet()
+        ..syncId = 'wallet_resume_test'
+        ..name = 'BCA'
+        ..balance = 500000
+        ..isActive = true
+        ..createdAt = DateTime.now()
+        ..updatedAt = DateTime.now();
+      await isar.writeTxn(() => isar.wallets.put(wallet));
+
+      final pastDate = DateTime(2020, 1, 1);
+      final recurring = await repository.createRecurring(
+        type: 'EXPENSE',
+        amount: 50000,
+        walletSyncId: 'wallet_resume_test',
+        frequency: 'MONTHLY',
+        startDate: pastDate,
+      );
+
+      // Pause it first
+      await repository.toggleActive(recurring.syncId, false);
+
+      // Now resume it
+      await repository.toggleActive(recurring.syncId, true);
+
+      final updated = await repository.getBySyncId(recurring.syncId);
+      expect(updated?.isActive, isTrue);
+      // nextDueDate must be >= start of today
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day);
+      expect(updated!.nextDueDate.isBefore(todayStart), isFalse);
+      expect(updated.nextDueDate.day, equals(pastDate.day));
+    });
+
+    test('toggleActive(true) throws StateError if schedule is already completed', () async {
+      final wallet = Wallet()
+        ..syncId = 'wallet_completed_test'
+        ..name = 'BCA'
+        ..balance = 500000
+        ..isActive = true
+        ..createdAt = DateTime.now()
+        ..updatedAt = DateTime.now();
+      await isar.writeTxn(() => isar.wallets.put(wallet));
+
+      final recurring = await repository.createRecurring(
+        type: 'EXPENSE',
+        amount: 50000,
+        walletSyncId: 'wallet_completed_test',
+        frequency: 'DAILY',
+        startDate: DateTime.now(),
+        maxOccurrences: 1,
+      );
+
+      // Execute once to complete schedule
+      await repository.executeRecurring(
+        recurringSyncId: recurring.syncId,
+        executionDate: DateTime.now(),
+      );
+
+      expect(
+        () => repository.toggleActive(recurring.syncId, true),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('toggleActive(true) marks schedule completed if advanced past endDate', () async {
+      final wallet = Wallet()
+        ..syncId = 'wallet_enddate_test'
+        ..name = 'BCA'
+        ..balance = 500000
+        ..isActive = true
+        ..createdAt = DateTime.now()
+        ..updatedAt = DateTime.now();
+      await isar.writeTxn(() => isar.wallets.put(wallet));
+
+      final pastStart = DateTime(2020, 1, 1);
+      final pastEnd = DateTime(2020, 2, 1);
+      final recurring = await repository.createRecurring(
+        type: 'EXPENSE',
+        amount: 50000,
+        walletSyncId: 'wallet_enddate_test',
+        frequency: 'MONTHLY',
+        startDate: pastStart,
+        endDate: pastEnd,
+      );
+
+      // Pause it
+      await repository.toggleActive(recurring.syncId, false);
+
+      // Resume it: next cycle candidate will be in current year, which is after pastEnd
+      await repository.toggleActive(recurring.syncId, true);
+
+      final updated = await repository.getBySyncId(recurring.syncId);
+      expect(updated?.isCompleted, isTrue);
+      expect(updated?.isActive, isFalse);
+    });
   });
 }

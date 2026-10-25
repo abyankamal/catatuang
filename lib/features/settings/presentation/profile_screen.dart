@@ -891,6 +891,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             onTap: () => context.push('/contacts'),
                           ),
                           const SizedBox(height: 16),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withAlpha(20),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.event_repeat_rounded, color: Colors.blue),
+                            ),
+                            title: Text(
+                              'Transaksi Terjadwal',
+                              style: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: AppColors.secondary),
+                            ),
+                            subtitle: Text('Kelola jadwal pembayaran & tagihan rutin', style: GoogleFonts.hankenGrotesk()),
+                            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.secondary),
+                            onTap: () => context.push('/recurring-transactions'),
+                          ),
+                          const SizedBox(height: 16),
                           SwitchListTile(
                             contentPadding: EdgeInsets.zero,
                             activeThumbColor: AppColors.primary,

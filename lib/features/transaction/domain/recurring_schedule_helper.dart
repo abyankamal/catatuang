@@ -87,6 +87,19 @@ class RecurringScheduleHelper {
     }
   }
 
+  /// Menormalkan waktu ke awal hari (00:00:00.000).
+  static DateTime startOfDay(DateTime dateTime) {
+    return DateTime(
+      dateTime.year,
+      dateTime.month,
+      dateTime.day,
+      0,
+      0,
+      0,
+      0,
+    );
+  }
+
   /// Menormalkan waktu ke batas akhir hari (23:59:59.999).
   static DateTime endOfDay(DateTime dateTime) {
     return DateTime(

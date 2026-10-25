@@ -12,6 +12,7 @@ import '../../features/report/presentation/report_screen.dart';
 import '../../features/settings/application/settings_providers.dart';
 import '../../features/settings/presentation/profile_screen.dart';
 import '../../features/transaction/presentation/add_transaction_screen.dart';
+import '../../features/transaction/presentation/recurring_transaction_list_screen.dart';
 import '../../features/transaction/presentation/transaction_history_screen.dart';
 import '../presentation/main_navigation_screen.dart';
 import 'not_found_screen.dart';
@@ -244,6 +245,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     GoRoute(
       path: '/search',
       builder: (context, state) => const GlobalSearchScreen(),
+    ),
+    // Fitur Transaksi Terjadwal / Berulang
+    GoRoute(
+      path: '/recurring-transactions',
+      builder: (context, state) => const RecurringTransactionListScreen(),
     ),
     // Fitur Onboarding
     GoRoute(

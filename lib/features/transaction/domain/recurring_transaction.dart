@@ -1,4 +1,5 @@
 import 'package:isar/isar.dart';
+import 'recurring_schedule_helper.dart';
 
 part 'recurring_transaction.g.dart';
 
@@ -40,6 +41,9 @@ class RecurringTransaction {
 
   late DateTime createdAt;
   late DateTime updatedAt;
+
+  @ignore
+  bool get isCompleted => RecurringScheduleHelper.isCompleted(this);
 
   Map<String, dynamic> toJson() {
     return {

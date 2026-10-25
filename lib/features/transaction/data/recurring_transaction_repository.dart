@@ -144,7 +144,33 @@ class RecurringTransactionRepository {
       throw Exception('Jadwal transaksi tidak ditemukan.');
     }
 
-    existing.isActive = isActive;
+    if (isActive) {
+      if (existing.isCompleted) {
+        throw StateError('Jadwal transaksi yang sudah selesai tidak dapat diaktifkan kembali.');
+      }
+      final todayStart = RecurringScheduleHelper.startOfDay(DateTime.now());
+      if (existing.nextDueDate.isBefore(todayStart)) {
+        DateTime candidate = existing.nextDueDate;
+        while (candidate.isBefore(todayStart)) {
+          candidate = RecurringScheduleHelper.calculateNextDueDate(
+            currentDueDate: candidate,
+            frequency: existing.frequency,
+            interval: existing.interval,
+            anchorDay: existing.startDate.day,
+          );
+        }
+        existing.nextDueDate = candidate;
+      }
+
+      if (existing.isCompleted) {
+        existing.isActive = false;
+      } else {
+        existing.isActive = true;
+      }
+    } else {
+      existing.isActive = false;
+    }
+
     existing.updatedAt = DateTime.now();
 
     await _isar.writeTxn(() async {
