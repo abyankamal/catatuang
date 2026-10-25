@@ -8,8 +8,10 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../category/data/category_repository.dart';
 import '../../dashboard/application/dashboard_providers.dart';
 import '../../goal/application/goal_providers.dart';
+import '../application/recurring_transaction_controller.dart';
 import '../application/transaction_controller.dart';
 import '../domain/transaction.dart';
+import 'widgets/recurring_interval_picker.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   final Transaction? existingTransaction;
@@ -33,6 +35,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   String? _selectedWalletSyncId;
   String? _destinationWalletSyncId;
   String? _selectedCategorySyncId;
+
+  // Recurring transaction state options
+  bool _isRecurring = false;
+  String _recurringFrequency = 'MONTHLY';
+  int _recurringInterval = 1;
+  bool _recurringAutoExecute = false;
+  DateTime? _recurringEndDate;
 
   bool get isEditMode => widget.existingTransaction != null;
   bool get isTransfer => _selectedType == 'TRANSFER';
@@ -69,15 +78,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   Future<void> _selectDate() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    final maxDate = _isRecurring ? DateTime(now.year + 20) : today;
 
-    final initialDate = _selectedDate.isAfter(today) ? today : _selectedDate;
+    final initialDate =
+        _selectedDate.isAfter(maxDate) ? maxDate : _selectedDate;
 
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
       firstDate: DateTime(2020),
-      lastDate: today,
-      helpText: 'Pilih Tanggal Transaksi',
+      lastDate: maxDate,
+      helpText: _isRecurring
+          ? 'Pilih Tanggal Mulai Transaksi Rutin'
+          : 'Pilih Tanggal Transaksi',
     );
     if (picked != null) {
       final isPickedToday =
@@ -129,11 +142,25 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final now = DateTime.now();
     final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-    if (_selectedDate.isAfter(endOfToday)) {
+    if (!_isRecurring && _selectedDate.isAfter(endOfToday)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
             'Tanggal transaksi tidak boleh melebihi hari ini.',
+          ),
+          backgroundColor: AppColors.expense,
+        ),
+      );
+      return;
+    }
+
+    if (_isRecurring &&
+        _recurringEndDate != null &&
+        _recurringEndDate!.isBefore(_selectedDate)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Tanggal batas akhir tidak boleh mendahului tanggal mulai transaksi.',
           ),
           backgroundColor: AppColors.expense,
         ),
@@ -184,8 +211,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       return;
     }
 
-    bool success;
-
     if (isTransfer) {
       if (_destinationWalletSyncId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -204,13 +229,102 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         );
         return;
       }
+    }
 
-      final rawAdminFee = _adminFeeController.text.replaceAll(
-        RegExp(r'[^0-9]'),
-        '',
+    final rawAdminFee = _adminFeeController.text.replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
+    final adminFee = double.tryParse(rawAdminFee) ?? 0.0;
+    final trimmedDesc = _descriptionController.text.trim().isEmpty
+        ? null
+        : _descriptionController.text.trim();
+
+    // Jalur Transaksi Berulang (Hanya tersedia jika bukan mode edit dan toggle aktif)
+    if (!isEditMode && _isRecurring) {
+      final recurringController =
+          ref.read(recurringTransactionControllerProvider.notifier);
+      final recurring = await recurringController.createRecurring(
+        type: _selectedType,
+        amount: amount,
+        walletSyncId: _selectedWalletSyncId!,
+        frequency: _recurringFrequency,
+        interval: _recurringInterval,
+        startDate: _selectedDate,
+        endDate: _recurringEndDate,
+        description: trimmedDesc,
+        categorySyncId: isTransfer ? null : _selectedCategorySyncId,
+        targetWalletSyncId: isTransfer ? _destinationWalletSyncId : null,
+        adminFee: isTransfer ? adminFee : null,
+        autoExecute: _recurringAutoExecute,
       );
-      final adminFee = double.tryParse(rawAdminFee) ?? 0.0;
 
+      if (!mounted) return;
+
+      if (recurring == null) {
+        final error = ref.read(recurringTransactionControllerProvider).error;
+        final errorMsg = error?.toString().replaceAll(RegExp(r'^Exception:\s*'), '') ?? "Terjadi kesalahan";
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menjadwalkan transaksi rutin: $errorMsg'),
+            backgroundColor: AppColors.expense,
+          ),
+        );
+        return;
+      }
+
+      // Pola Anti-Double Charge:
+      // Jika tanggal mulai adalah hari ini atau masa lalu, langsung eksekusi siklus pertama
+      // agar saldo dompet terpotong dan nextDueDate maju ke siklus berikutnya.
+      final isDueNow = !_selectedDate.isAfter(endOfToday);
+      if (isDueNow) {
+        final executed = await recurringController.confirmExecution(
+          recurring.syncId,
+          executionDate: _selectedDate,
+        );
+
+        if (!mounted) return;
+
+        if (executed) {
+          if (Navigator.of(context).canPop()) {
+            context.pop();
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Transaksi rutin berhasil dibuat dan dicatat untuk hari ini.',
+              ),
+              backgroundColor: AppColors.income,
+            ),
+          );
+        } else {
+          final error = ref.read(recurringTransactionControllerProvider).error;
+          final errorMsg = error?.toString().replaceAll(RegExp(r'^Exception:\s*'), '') ?? "Terjadi kesalahan";
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Jadwal dibuat, namun eksekusi pertama gagal: $errorMsg'),
+              backgroundColor: AppColors.expense,
+            ),
+          );
+        }
+      } else {
+        // Tanggal mulai di masa depan: simpan jadwal saja tanpa memotong saldo hari ini.
+        if (Navigator.of(context).canPop()) {
+          context.pop();
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Jadwal transaksi rutin berhasil didaftarkan.'),
+            backgroundColor: AppColors.income,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Jalur Transaksi Reguler (Non-berulang)
+    bool success;
+    if (isTransfer) {
       success = await ref
           .read(transactionControllerProvider.notifier)
           .transferBetweenWallets(
@@ -219,9 +333,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             amount: amount,
             date: _selectedDate,
             adminFee: adminFee,
-            description: _descriptionController.text.trim().isEmpty
-                ? null
-                : _descriptionController.text.trim(),
+            description: trimmedDesc,
           );
     } else if (isEditMode) {
       success = await ref
@@ -233,9 +345,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             date: _selectedDate,
             walletSyncId: _selectedWalletSyncId!,
             categorySyncId: _selectedCategorySyncId,
-            description: _descriptionController.text.trim().isEmpty
-                ? null
-                : _descriptionController.text.trim(),
+            description: trimmedDesc,
           );
     } else {
       success = await ref
@@ -246,15 +356,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             date: _selectedDate,
             walletSyncId: _selectedWalletSyncId!,
             categorySyncId: _selectedCategorySyncId,
-            description: _descriptionController.text.trim().isEmpty
-                ? null
-                : _descriptionController.text.trim(),
+            description: trimmedDesc,
           );
     }
 
     if (mounted) {
       if (success) {
-        context.pop();
+        if (Navigator.of(context).canPop()) {
+          context.pop();
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -295,7 +405,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final walletsAsync = ref.watch(activeRegularWalletsStreamProvider);
     final categoriesAsync = ref.watch(activeCategoriesStreamProvider);
     final controllerState = ref.watch(transactionControllerProvider);
-    final isLoading = controllerState.isLoading;
+    final isLoading = controllerState.isLoading ||
+        (_isRecurring &&
+            ref.watch(recurringTransactionControllerProvider).isLoading);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -647,6 +759,48 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         ),
                       ),
                     ),
+                    if (!isEditMode) ...[
+                      const SizedBox(height: 20),
+                      RecurringIntervalPicker(
+                        isRecurring: _isRecurring,
+                        onRecurringChanged: (enabled) {
+                          setState(() {
+                            _isRecurring = enabled;
+                            if (!enabled) {
+                              final now = DateTime.now();
+                              final today = DateTime(
+                                now.year,
+                                now.month,
+                                now.day,
+                                23,
+                                59,
+                                59,
+                              );
+                              if (_selectedDate.isAfter(today)) {
+                                _selectedDate = now;
+                              }
+                            }
+                          });
+                        },
+                        frequency: _recurringFrequency,
+                        onFrequencyChanged: (freq) {
+                          setState(() => _recurringFrequency = freq);
+                        },
+                        interval: _recurringInterval,
+                        onIntervalChanged: (val) {
+                          setState(() => _recurringInterval = val);
+                        },
+                        autoExecute: _recurringAutoExecute,
+                        onAutoExecuteChanged: (val) {
+                          setState(() => _recurringAutoExecute = val);
+                        },
+                        endDate: _recurringEndDate,
+                        onEndDateChanged: (date) {
+                          setState(() => _recurringEndDate = date);
+                        },
+                        themeColor: _themeColor,
+                      ),
+                    ],
                     const SizedBox(height: 16),
                   ],
                 ),
@@ -674,7 +828,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               child: isLoading
                   ? const CircularProgressIndicator(color: Colors.white)
                   : Text(
-                      isTransfer ? 'Transfer Sekarang' : 'Simpan Transaksi',
+                      _isRecurring
+                          ? (isTransfer
+                              ? 'Jadwalkan Transfer'
+                              : 'Simpan Transaksi Rutin')
+                          : (isTransfer
+                              ? 'Transfer Sekarang'
+                              : 'Simpan Transaksi'),
                       style: GoogleFonts.manrope(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

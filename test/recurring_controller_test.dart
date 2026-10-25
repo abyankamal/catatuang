@@ -85,7 +85,7 @@ void main() {
         description: 'Langganan Netflix',
       );
 
-      expect(success, isTrue);
+      expect(success, isNotNull);
       expect(container.read(recurringTransactionControllerProvider).hasError, isFalse);
       expect(container.read(recurringTransactionControllerProvider).isLoading, isFalse);
 

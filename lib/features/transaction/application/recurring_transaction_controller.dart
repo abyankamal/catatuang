@@ -20,8 +20,8 @@ final activeRecurringStreamProvider = StreamProvider<List<RecurringTransaction>>
 
 /// Provider daftar transaksi berulang yang jatuh tempo (membutuhkan konfirmasi manual)
 final dueManualRecurringProvider = FutureProvider<List<RecurringTransaction>>((ref) async {
-  // Watch active stream so it updates when a recurring transaction is executed, skipped, or updated
-  ref.watch(activeRecurringStreamProvider);
+  // Listen to active stream so it updates when a recurring transaction is executed, skipped, or updated
+  ref.listen(activeRecurringStreamProvider, (_, _) => ref.invalidateSelf());
   final repo = ref.watch(recurringTransactionRepositoryProvider);
   final now = DateTime.now();
   final allDue = await repo.getDueRecurring(RecurringScheduleHelper.endOfDay(now));
@@ -47,7 +47,7 @@ class RecurringTransactionController extends StateNotifier<AsyncValue<void>> {
 
   bool get isProcessingAutoRecurring => _isProcessingAutoRecurring;
 
-  Future<bool> createRecurring({
+  Future<RecurringTransaction?> createRecurring({
     required String type,
     required double amount,
     required String walletSyncId,
@@ -64,7 +64,7 @@ class RecurringTransactionController extends StateNotifier<AsyncValue<void>> {
   }) async {
     state = const AsyncValue.loading();
     try {
-      await _repository.createRecurring(
+      final recurring = await _repository.createRecurring(
         type: type,
         amount: amount,
         walletSyncId: walletSyncId,
@@ -81,10 +81,10 @@ class RecurringTransactionController extends StateNotifier<AsyncValue<void>> {
       );
       _invalidateDownstreamProviders();
       state = const AsyncValue.data(null);
-      return true;
+      return recurring;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
-      return false;
+      return null;
     }
   }
 
