@@ -401,5 +401,72 @@ void main() {
       // Verify controller skipCurrentCycle was called
       expect(mockController.skippedSyncId, 'rec_skip_test');
     });
+
+    testWidgets(
+        'NotificationSheet dialog supports thousand dot format and parses correctly',
+        (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final now = DateTime.now();
+      final recurring = RecurringTransaction()
+        ..syncId = 'rec_notif_thousand'
+        ..type = 'EXPENSE'
+        ..amount = 200000
+        ..walletSyncId = 'wallet_main'
+        ..frequency = 'MONTHLY'
+        ..interval = 1
+        ..startDate = now.subtract(const Duration(days: 30))
+        ..nextDueDate = now
+        ..autoExecute = false
+        ..isActive = true
+        ..description = 'Tagihan PDAM'
+        ..createdAt = now
+        ..updatedAt = now;
+
+      final item = AppNotificationItem(
+        id: 'rec_notif_pdam',
+        title: 'Transaksi Rutin Hari Ini',
+        message: 'Saatnya mencatat jadwal "Tagihan PDAM" hari ini.',
+        type: 'RECURRING',
+        urgency: NotificationUrgency.dueToday,
+        recurring: recurring,
+        dueDate: now,
+        remainingAmount: 200000,
+      );
+
+      final mockController = TestRecurringTransactionController();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            activeRemindersProvider.overrideWith((ref) => Future.value([item])),
+            recurringTransactionControllerProvider.overrideWith((ref) => mockController),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: NotificationSheet(),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      await tester.tap(find.text('Catat Sekarang'));
+      await tester.pump();
+
+      // Enter thousands with dot
+      await tester.enterText(find.byType(TextFormField), '225.000');
+      await tester.pump();
+
+      final dialogCatatBtn = find.widgetWithText(ElevatedButton, 'Catat Sekarang');
+      await tester.tap(dialogCatatBtn);
+      await tester.pump();
+
+      expect(mockController.confirmedSyncId, 'rec_notif_thousand');
+      expect(mockController.confirmedAmount, 225000.0);
+    });
   });
 }
