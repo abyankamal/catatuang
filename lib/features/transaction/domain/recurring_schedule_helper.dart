@@ -87,6 +87,19 @@ class RecurringScheduleHelper {
     }
   }
 
+  /// Menormalkan waktu ke batas akhir hari (23:59:59.999).
+  static DateTime endOfDay(DateTime dateTime) {
+    return DateTime(
+      dateTime.year,
+      dateTime.month,
+      dateTime.day,
+      23,
+      59,
+      59,
+      999,
+    );
+  }
+
   /// Memeriksa apakah jadwal berulang sudah mencapai batas akhir (kadaluarsa/selesai).
   static bool isCompleted(RecurringTransaction recurring) {
     // 1. Batas jumlah pengulangan
@@ -96,9 +109,12 @@ class RecurringScheduleHelper {
       }
     }
 
-    // 2. Batas tanggal akhir
+    // 2. Batas tanggal akhir dinormalisasi ke akhir hari (23:59:59.999)
+    // agar siklus terakhir pada tanggal endDate tetap tereksekusi meskipun
+    // tanggal endDate berasal dari date picker dengan jam 00:00:00.
     if (recurring.endDate != null) {
-      if (recurring.nextDueDate.isAfter(recurring.endDate!)) {
+      final normalizedEndDate = endOfDay(recurring.endDate!);
+      if (recurring.nextDueDate.isAfter(normalizedEndDate)) {
         return true;
       }
     }
@@ -107,7 +123,7 @@ class RecurringScheduleHelper {
   }
 
   /// Menghasilkan daftar tanggal jatuh tempo yang tertunda (*missed cycles*)
-  /// hingga batas [now], dibatasi maksimal [maxCycles] (default 12) untuk mencegah loop/spam.
+  /// hingga batas akhir hari [now], dibatasi maksimal [maxCycles] (default 12) untuk mencegah loop/spam.
   static List<DateTime> getMissedDueDates(
     RecurringTransaction recurring,
     DateTime now, {
@@ -117,7 +133,8 @@ class RecurringScheduleHelper {
       return const [];
     }
 
-    if (recurring.nextDueDate.isAfter(now)) {
+    final normalizedNow = endOfDay(now);
+    if (recurring.nextDueDate.isAfter(normalizedNow)) {
       return const [];
     }
 
@@ -125,10 +142,12 @@ class RecurringScheduleHelper {
     var currentCursor = recurring.nextDueDate;
     var virtualCount = recurring.occurrenceCount;
     final anchorDay = recurring.startDate.day;
+    final normalizedEndDate =
+        recurring.endDate != null ? endOfDay(recurring.endDate!) : null;
 
-    while (!currentCursor.isAfter(now) && missedDates.length < maxCycles) {
+    while (!currentCursor.isAfter(normalizedNow) && missedDates.length < maxCycles) {
       // Periksa apakah batas tanggal atau batas pengulangan tercapai
-      if (recurring.endDate != null && currentCursor.isAfter(recurring.endDate!)) {
+      if (normalizedEndDate != null && currentCursor.isAfter(normalizedEndDate)) {
         break;
       }
 

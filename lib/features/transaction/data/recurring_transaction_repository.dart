@@ -38,13 +38,14 @@ class RecurringTransactionRepository {
         .watch(fireImmediately: true);
   }
 
-  /// Mengambil semua jadwal berulang yang aktif dan jatuh tempo pada atau sebelum [untilDate]
+  /// Mengambil semua jadwal berulang yang aktif dan jatuh tempo pada atau sebelum batas akhir hari [untilDate]
   Future<List<RecurringTransaction>> getDueRecurring(DateTime untilDate) async {
+    final normalizedUntil = RecurringScheduleHelper.endOfDay(untilDate);
     return await _isar.recurringTransactions
         .filter()
         .isActiveEqualTo(true)
         .and()
-        .nextDueDateLessThan(untilDate.add(const Duration(seconds: 1)))
+        .nextDueDateLessThan(normalizedUntil.add(const Duration(milliseconds: 1)))
         .sortByNextDueDate()
         .findAll();
   }

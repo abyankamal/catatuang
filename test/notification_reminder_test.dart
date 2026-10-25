@@ -166,6 +166,55 @@ void main() {
       expect(reminders[1].title, 'Transaksi Rutin Hari Ini');
       expect(reminders[1].remainingAmount, 150000);
     });
+
+    test('getActiveRecurringReminders retrieves same-day recurring even if due at late night and excludes tomorrow',
+        () async {
+      final now = DateTime.now();
+
+      // Recurring item due tonight at 23:00
+      final tonight = DateTime(now.year, now.month, now.day, 23, 0);
+      final recurringTonight = RecurringTransaction()
+        ..syncId = 'rec_tonight'
+        ..type = 'EXPENSE'
+        ..amount = 250000
+        ..walletSyncId = 'wallet_main'
+        ..frequency = 'MONTHLY'
+        ..interval = 1
+        ..startDate = tonight
+        ..nextDueDate = tonight
+        ..autoExecute = false
+        ..isActive = true
+        ..description = 'Tagihan Malam Ini'
+        ..createdAt = now
+        ..updatedAt = now;
+
+      // Recurring item due tomorrow at 08:00
+      final tomorrow = DateTime(now.year, now.month, now.day + 1, 8, 0);
+      final recurringTomorrow = RecurringTransaction()
+        ..syncId = 'rec_tomorrow'
+        ..type = 'EXPENSE'
+        ..amount = 100000
+        ..walletSyncId = 'wallet_main'
+        ..frequency = 'MONTHLY'
+        ..interval = 1
+        ..startDate = tomorrow
+        ..nextDueDate = tomorrow
+        ..autoExecute = false
+        ..isActive = true
+        ..description = 'Tagihan Esok Hari'
+        ..createdAt = now
+        ..updatedAt = now;
+
+      await isar.writeTxn(() async {
+        await isar.recurringTransactions.put(recurringTonight);
+        await isar.recurringTransactions.put(recurringTomorrow);
+      });
+
+      final recurringReminders = await notificationRepo.getActiveRecurringReminders();
+      expect(recurringReminders.length, 1);
+      expect(recurringReminders.first.recurring?.syncId, 'rec_tonight');
+      expect(recurringReminders.first.urgency, NotificationUrgency.dueToday);
+    });
   });
 
   group('NotificationSheet Widget Tests', () {

@@ -121,13 +121,14 @@ class NotificationRepository {
   /// Mengambil daftar transaksi rutin manual (autoExecute == false) yang telah jatuh tempo
   Future<List<AppNotificationItem>> getActiveRecurringReminders() async {
     final now = DateTime.now();
+    final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
     final recurringList = await _isar.recurringTransactions
         .filter()
         .isActiveEqualTo(true)
         .and()
         .autoExecuteEqualTo(false)
         .and()
-        .nextDueDateLessThan(now.add(const Duration(seconds: 1)))
+        .nextDueDateLessThan(endOfToday.add(const Duration(milliseconds: 1)))
         .sortByNextDueDate()
         .findAll();
 

@@ -24,7 +24,7 @@ final dueManualRecurringProvider = FutureProvider<List<RecurringTransaction>>((r
   ref.watch(activeRecurringStreamProvider);
   final repo = ref.watch(recurringTransactionRepositoryProvider);
   final now = DateTime.now();
-  final allDue = await repo.getDueRecurring(now);
+  final allDue = await repo.getDueRecurring(RecurringScheduleHelper.endOfDay(now));
   return allDue.where((r) => !r.autoExecute && r.isActive).toList();
 });
 
@@ -188,14 +188,15 @@ class RecurringTransactionController extends StateNotifier<AsyncValue<void>> {
 
     try {
       final now = DateTime.now();
-      final allDue = await _repository.getDueRecurring(now);
+      final endOfToday = RecurringScheduleHelper.endOfDay(now);
+      final allDue = await _repository.getDueRecurring(endOfToday);
       final autoDueList = allDue.where((r) => r.autoExecute && r.isActive).toList();
 
       for (final recurring in autoDueList) {
         // Ambil daftar siklus terlewat (maksimal 12 siklus per jadwal)
         final missedDueDates = RecurringScheduleHelper.getMissedDueDates(
           recurring,
-          now,
+          endOfToday,
           maxCycles: 12,
         );
 

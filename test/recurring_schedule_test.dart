@@ -170,6 +170,43 @@ void main() {
 
       expect(RecurringScheduleHelper.isCompleted(recurring), isTrue);
     });
+
+    test('Does NOT mark completed when nextDueDate is on same day as endDate with 00:00:00', () {
+      // DatePicker usually returns midnight (00:00:00.000)
+      final endDateFromPicker = DateTime(2026, 5, 31, 0, 0, 0);
+      final recurring = RecurringTransaction()
+        ..syncId = 'rec_sameday_end'
+        ..type = 'EXPENSE'
+        ..amount = 50000
+        ..frequency = 'MONTHLY'
+        ..interval = 1
+        ..startDate = DateTime(2026, 1, 31, 15, 30)
+        ..endDate = endDateFromPicker
+        ..nextDueDate = DateTime(2026, 5, 31, 15, 30) // Afternoon cycle on the end date
+        ..occurrenceCount = 4;
+
+      // Must NOT be completed yet so the final cycle can execute
+      expect(RecurringScheduleHelper.isCompleted(recurring), isFalse);
+
+      // But when nextDueDate advances to next cycle after endDate, it marks completed
+      recurring.nextDueDate = DateTime(2026, 6, 30, 15, 30);
+      expect(RecurringScheduleHelper.isCompleted(recurring), isTrue);
+    });
+  });
+
+  group('RecurringScheduleHelper - endOfDay Tests', () {
+    test('endOfDay normalizes any hour/minute/second to 23:59:59.999', () {
+      final morning = DateTime(2026, 4, 15, 8, 15, 30, 123);
+      final normalized = RecurringScheduleHelper.endOfDay(morning);
+
+      expect(normalized.year, 2026);
+      expect(normalized.month, 4);
+      expect(normalized.day, 15);
+      expect(normalized.hour, 23);
+      expect(normalized.minute, 59);
+      expect(normalized.second, 59);
+      expect(normalized.millisecond, 999);
+    });
   });
 
   group('RecurringScheduleHelper - getMissedDueDates Multi-Cycle Catch-Up Tests', () {
@@ -249,6 +286,64 @@ void main() {
       expect(missed.length, equals(2));
       expect(missed[0], equals(DateTime(2026, 2, 1)));
       expect(missed[1], equals(DateTime(2026, 3, 1)));
+    });
+
+    test('Includes same-day cycle even when evaluated in the morning with evening nextDueDate', () {
+      // User opens app at 08:00 in the morning
+      final morningNow = DateTime(2026, 4, 15, 8, 0);
+
+      // Recurring transaction was created with nextDueDate at 20:00 in the evening
+      final recurring = RecurringTransaction()
+        ..syncId = 'rec_sameday_morning'
+        ..type = 'EXPENSE'
+        ..amount = 50000
+        ..frequency = 'MONTHLY'
+        ..interval = 1
+        ..isActive = true
+        ..startDate = DateTime(2026, 3, 15, 20, 0)
+        ..nextDueDate = DateTime(2026, 4, 15, 20, 0);
+
+      final missed = RecurringScheduleHelper.getMissedDueDates(recurring, morningNow);
+      expect(missed.length, equals(1));
+      expect(missed.first, equals(DateTime(2026, 4, 15, 20, 0)));
+    });
+
+    test('Does NOT execute tomorrow schedule early', () {
+      // Current time is late night 23:30
+      final lateNight = DateTime(2026, 4, 15, 23, 30);
+
+      // Next due date is tomorrow 16 April
+      final recurring = RecurringTransaction()
+        ..syncId = 'rec_tomorrow'
+        ..type = 'EXPENSE'
+        ..amount = 50000
+        ..frequency = 'MONTHLY'
+        ..interval = 1
+        ..isActive = true
+        ..startDate = DateTime(2026, 3, 16, 8, 0)
+        ..nextDueDate = DateTime(2026, 4, 16, 8, 0);
+
+      final missed = RecurringScheduleHelper.getMissedDueDates(recurring, lateNight);
+      expect(missed, isEmpty);
+    });
+
+    test('Executes final cycle when endDate is on same day with 00:00:00 midnight', () {
+      final now = DateTime(2026, 4, 15, 10, 0);
+
+      final recurring = RecurringTransaction()
+        ..syncId = 'rec_final_cycle'
+        ..type = 'EXPENSE'
+        ..amount = 50000
+        ..frequency = 'MONTHLY'
+        ..interval = 1
+        ..isActive = true
+        ..startDate = DateTime(2026, 1, 15, 14, 0)
+        ..nextDueDate = DateTime(2026, 4, 15, 14, 0)
+        ..endDate = DateTime(2026, 4, 15, 0, 0, 0); // showDatePicker midnight
+
+      final missed = RecurringScheduleHelper.getMissedDueDates(recurring, now);
+      expect(missed.length, equals(1));
+      expect(missed.first, equals(DateTime(2026, 4, 15, 14, 0)));
     });
   });
 

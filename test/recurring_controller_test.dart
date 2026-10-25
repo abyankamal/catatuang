@@ -275,6 +275,42 @@ void main() {
       expect(dueManual.length, 1);
       expect(dueManual.first.description, 'Manual Past Due');
     });
+
+    test('dueManualRecurringProvider returns same-day schedule with late hour when queried in morning',
+        () async {
+      await createTestWallet();
+
+      final now = DateTime.now();
+      // Schedule due at 22:00 tonight
+      final tonightDueDate = DateTime(now.year, now.month, now.day, 22, 0, 0);
+
+      await repository.createRecurring(
+        type: 'EXPENSE',
+        amount: 350000,
+        walletSyncId: 'wallet_main',
+        frequency: 'MONTHLY',
+        startDate: tonightDueDate,
+        autoExecute: false,
+        description: 'Tagihan Listrik Malam Ini',
+      );
+
+      // Tomorrow schedule at 08:00
+      final tomorrowDueDate = DateTime(now.year, now.month, now.day + 1, 8, 0, 0);
+      await repository.createRecurring(
+        type: 'EXPENSE',
+        amount: 50000,
+        walletSyncId: 'wallet_main',
+        frequency: 'MONTHLY',
+        startDate: tomorrowDueDate,
+        autoExecute: false,
+        description: 'Jadwal Esok Hari',
+      );
+
+      final dueManual = await container.read(dueManualRecurringProvider.future);
+      // Must include today's evening schedule, but exclude tomorrow's schedule
+      expect(dueManual.length, 1);
+      expect(dueManual.first.description, 'Tagihan Listrik Malam Ini');
+    });
   });
 
   group('Auto-Execution & In-Memory Mutex Lock', () {
@@ -362,6 +398,55 @@ void main() {
 
       final wallet = await isar.wallets.getBySyncId('wallet_main');
       expect(wallet?.balance, 2000000 - (50000 * executedCount));
+    });
+
+    test(
+        'processDueAutoTransactions executes same-day schedule with late hour and excludes tomorrow',
+        () async {
+      await createTestWallet(balance: 1000000);
+      final controller = container.read(recurringTransactionControllerProvider.notifier);
+
+      final now = DateTime.now();
+      // Auto-schedule due at 23:00 tonight
+      final tonightDueDate = DateTime(now.year, now.month, now.day, 23, 0, 0);
+
+      await repository.createRecurring(
+        type: 'EXPENSE',
+        amount: 75000,
+        walletSyncId: 'wallet_main',
+        frequency: 'MONTHLY',
+        startDate: tonightDueDate,
+        autoExecute: true,
+        description: 'Auto Malam Hari',
+      );
+
+      // Auto-schedule due tomorrow at 06:00
+      final tomorrowDueDate = DateTime(now.year, now.month, now.day + 1, 6, 0, 0);
+      await repository.createRecurring(
+        type: 'EXPENSE',
+        amount: 50000,
+        walletSyncId: 'wallet_main',
+        frequency: 'MONTHLY',
+        startDate: tomorrowDueDate,
+        autoExecute: true,
+        description: 'Auto Esok Hari',
+      );
+
+      final executedCount = await controller.processDueAutoTransactions();
+      // Only today's schedule should execute
+      expect(executedCount, 1);
+
+      final transactions = await isar.transactions.where().findAll();
+      expect(transactions.length, 1);
+      expect(transactions.first.description, 'Auto Malam Hari');
+
+      // Tomorrow's recurring schedule remains untouched
+      final tomorrowRec = await isar.recurringTransactions
+          .filter()
+          .descriptionEqualTo('Auto Esok Hari')
+          .findFirst();
+      expect(tomorrowRec, isNotNull);
+      expect(tomorrowRec?.occurrenceCount, 0);
     });
   });
 }
