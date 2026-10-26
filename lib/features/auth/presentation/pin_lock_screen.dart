@@ -177,17 +177,35 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
 
       case PinLockMode.change:
         if (_step == 1) {
-          final isOldValid = await controller.verifyPin(pin);
-          if (isOldValid) {
-            setState(() {
-              _enteredPin = '';
-              _step = 2;
-            });
-          } else {
-            setState(() {
-              _enteredPin = '';
-              _errorMessage = 'PIN lama salah.';
-            });
+          try {
+            final isOldValid = await controller.verifyPin(pin);
+            if (isOldValid) {
+              setState(() {
+                _enteredPin = '';
+                _step = 2;
+              });
+            } else {
+              setState(() {
+                _enteredPin = '';
+                _errorMessage = 'PIN lama salah.';
+              });
+            }
+          } catch (e) {
+            final errorText = e.toString().replaceAll(RegExp(r'^Exception:\s*'), '');
+            final match = RegExp(r'(\d+)\s+detik').firstMatch(errorText);
+            final seconds = match != null ? int.tryParse(match.group(1)!) : null;
+
+            if (seconds != null && seconds > 0) {
+              setState(() {
+                _enteredPin = '';
+              });
+              _startLockoutCountdown(seconds);
+            } else {
+              setState(() {
+                _enteredPin = '';
+                _errorMessage = errorText;
+              });
+            }
           }
         } else if (_step == 2) {
           setState(() {

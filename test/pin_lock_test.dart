@@ -191,6 +191,42 @@ void main() {
       await tester.tap(find.text('1'));
       await tester.pump();
     });
+
+    testWidgets('PinLockMode.change step 1 handles lockout exception gracefully without crashing', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appSettingsRepositoryProvider.overrideWithValue(
+              _MockLockoutAppSettingsRepository(lockoutRemainingSeconds: 30),
+            ),
+          ],
+          child: const MaterialApp(
+            home: PinLockScreen(mode: PinLockMode.change),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.text('Masukkan PIN Saat Ini'), findsOneWidget);
+
+      // Masukkan 6 digit PIN: 123456
+      for (final digit in ['1', '2', '3', '4', '5', '6']) {
+        await tester.tap(find.text(digit));
+        await tester.pump();
+      }
+
+      await tester.pump();
+
+      // Memastikan pesan lockout muncul dan countdown berjalan alih-alih melempar exception tak tertangani
+      expect(find.textContaining('Terlalu banyak percobaan salah'), findsOneWidget);
+      expect(find.textContaining('Coba lagi dalam 30 detik'), findsOneWidget);
+
+      // Ketukan lebih lanjut saat lockout diabaikan
+      await tester.tap(find.text('9'));
+      await tester.pump();
+      expect(find.textContaining('Terlalu banyak percobaan salah'), findsOneWidget);
+    });
   });
 }
 
