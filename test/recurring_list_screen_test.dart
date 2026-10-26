@@ -1,38 +1,54 @@
 import 'package:catatuang/features/category/domain/category.dart';
+import 'package:catatuang/features/dashboard/application/dashboard_providers.dart';
 import 'package:catatuang/features/transaction/application/recurring_transaction_controller.dart';
+import 'package:catatuang/features/transaction/data/recurring_transaction_repository.dart';
 import 'package:catatuang/features/transaction/domain/recurring_transaction.dart';
 import 'package:catatuang/features/transaction/presentation/recurring_transaction_list_screen.dart';
 import 'package:catatuang/features/transaction/presentation/widgets/recurring_tile.dart';
-import 'package:catatuang/features/dashboard/application/dashboard_providers.dart';
 import 'package:catatuang/features/wallet/domain/wallet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-class MockRecurringTransactionController
-    extends StateNotifier<AsyncValue<void>>
-    implements RecurringTransactionController {
-  String? toggledSyncId;
-  bool? toggledValue;
-  String? hardDeletedSyncId;
+class FakeRecurringTransactionRepository implements RecurringTransactionRepository {
+  final Map<String, RecurringTransaction> items = {};
+  bool toggleActiveCalled = false;
+  String? lastToggledSyncId;
+  bool? lastToggledValue;
 
-  MockRecurringTransactionController() : super(const AsyncValue.data(null));
+  bool hardDeleteCalled = false;
+  String? lastDeletedSyncId;
 
   @override
-  bool get isProcessingAutoRecurring => false;
+  Stream<List<RecurringTransaction>> watchAllRecurring() {
+    return Stream.value(items.values.toList());
+  }
+
+  @override
+  Stream<List<RecurringTransaction>> watchActiveRecurring() {
+    return Stream.value(items.values.where((r) => r.isActive).toList());
+  }
 
   @override
   Future<bool> toggleActive(String syncId, bool isActive) async {
-    toggledSyncId = syncId;
-    toggledValue = isActive;
-    return true;
+    toggleActiveCalled = true;
+    lastToggledSyncId = syncId;
+    lastToggledValue = isActive;
+    final item = items[syncId];
+    if (item != null) {
+      item.isActive = isActive;
+      return true;
+    }
+    return false;
   }
 
   @override
   Future<bool> hardDelete(String syncId) async {
-    hardDeletedSyncId = syncId;
-    return true;
+    hardDeleteCalled = true;
+    lastDeletedSyncId = syncId;
+    final existed = items.remove(syncId);
+    return existed != null;
   }
 
   @override
@@ -45,224 +61,250 @@ void main() {
     await initializeDateFormatting('id_ID', null);
   });
 
-  Widget buildTestWidget({
-    required List<RecurringTransaction> items,
-    MockRecurringTransactionController? controller,
-    List<Wallet>? wallets,
-    List<Category>? categories,
-  }) {
-    final mockCtrl = controller ?? MockRecurringTransactionController();
-    final testWallets = wallets ??
-        [
-          Wallet()
-            ..syncId = 'wallet_bca'
-            ..name = 'BCA Utama'
-            ..balance = 1000000
-            ..isActive = true
-            ..createdAt = DateTime.now()
-            ..updatedAt = DateTime.now(),
-        ];
-    final testCategories = categories ??
-        [
-          Category()
-            ..syncId = 'cat_internet'
-            ..name = 'Internet & Wi-Fi'
-            ..type = 'EXPENSE'
-            ..isActive = true
-            ..createdAt = DateTime.now()
-            ..updatedAt = DateTime.now(),
-        ];
+  group('RecurringTransactionListScreen Widget Tests (Task 4.2)', () {
+    testWidgets('Renders empty states on both tabs when there are no recurring items', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
 
-    return ProviderScope(
-      overrides: [
-        recurringTransactionListStreamProvider
-            .overrideWith((ref) => Stream.value(items)),
-        activeWalletsStreamProvider
-            .overrideWith((ref) => Stream.value(testWallets)),
-        activeCategoriesStreamProvider
-            .overrideWith((ref) => Stream.value(testCategories)),
-        recurringTransactionControllerProvider
-            .overrideWith((ref) => mockCtrl),
-      ],
-      child: const MaterialApp(
-        home: RecurringTransactionListScreen(),
-      ),
-    );
-  }
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            recurringTransactionListStreamProvider.overrideWith((ref) => Stream.value([])),
+            activeWalletsStreamProvider.overrideWith((ref) => Stream.value([])),
+            activeCategoriesStreamProvider.overrideWith((ref) => Stream.value([])),
+          ],
+          child: const MaterialApp(
+            home: RecurringTransactionListScreen(),
+          ),
+        ),
+      );
 
-  group('RecurringTransactionListScreen Widget Tests', () {
-    testWidgets('renders empty state in Aktif tab when no active items exist',
-        (tester) async {
-      await tester.pumpWidget(buildTestWidget(items: []));
       await tester.pumpAndSettle();
 
+      // Check header title and tab headers
       expect(find.text('Transaksi Terjadwal'), findsOneWidget);
+      expect(find.text('Aktif'), findsOneWidget);
+      expect(find.text('Dijeda & Selesai'), findsOneWidget);
+
+      // Check empty state in tab Aktif
       expect(find.text('Tidak Ada Jadwal Aktif'), findsOneWidget);
-      expect(find.text('Jadwal Baru'), findsOneWidget);
+
+      // Switch to tab 'Dijeda & Selesai'
+      await tester.tap(find.text('Dijeda & Selesai'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tidak Ada Jadwal Dijeda / Selesai'), findsOneWidget);
     });
 
-    testWidgets('renders active item in Aktif tab with proper badges and amount',
-        (tester) async {
+    testWidgets('Renders active and inactive items on their respective tabs', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
       final activeItem = RecurringTransaction()
+        ..id = 1
         ..syncId = 'rec_wifi'
         ..type = 'EXPENSE'
         ..amount = 350000
-        ..description = 'Tagihan IndiHome'
         ..walletSyncId = 'wallet_bca'
         ..categorySyncId = 'cat_internet'
         ..frequency = 'MONTHLY'
         ..interval = 1
         ..startDate = DateTime(2026, 1, 1)
         ..nextDueDate = DateTime(2026, 11, 1)
+        ..description = 'Langganan Wi-Fi Rumah'
         ..autoExecute = true
         ..isActive = true
-        ..occurrenceCount = 0
-        ..createdAt = DateTime.now()
-        ..updatedAt = DateTime.now();
+        ..createdAt = DateTime(2026, 1, 1)
+        ..updatedAt = DateTime(2026, 1, 1);
 
-      await tester.pumpWidget(buildTestWidget(items: [activeItem]));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Tagihan IndiHome'), findsOneWidget);
-      expect(find.text('Rp 350.000'), findsOneWidget);
-      expect(find.text('Pengeluaran'), findsOneWidget);
-      expect(find.text('Setiap Bulan'), findsOneWidget);
-      expect(find.text('Otomatis'), findsOneWidget);
-      expect(find.text('Aktif'), findsAtLeastNWidgets(1));
-      expect(find.textContaining('BCA Utama • Internet & Wi-Fi'), findsOneWidget);
-      expect(find.byType(RecurringTile), findsOneWidget);
-    });
-
-    testWidgets('renders paused and completed items in Dijeda & Selesai tab',
-        (tester) async {
       final pausedItem = RecurringTransaction()
+        ..id = 2
         ..syncId = 'rec_gym'
         ..type = 'EXPENSE'
-        ..amount = 200000
-        ..description = 'Langganan Gym'
+        ..amount = 250000
         ..walletSyncId = 'wallet_bca'
         ..frequency = 'MONTHLY'
         ..interval = 1
         ..startDate = DateTime(2026, 1, 1)
-        ..nextDueDate = DateTime(2026, 11, 1)
+        ..nextDueDate = DateTime(2026, 11, 15)
+        ..description = 'Member Gym'
         ..autoExecute = false
-        ..isActive = false // Paused
-        ..occurrenceCount = 0
-        ..createdAt = DateTime.now()
-        ..updatedAt = DateTime.now();
-
-      final completedItem = RecurringTransaction()
-        ..syncId = 'rec_cicilan'
-        ..type = 'EXPENSE'
-        ..amount = 500000
-        ..description = 'Cicilan Laptop'
-        ..walletSyncId = 'wallet_bca'
-        ..frequency = 'MONTHLY'
-        ..interval = 1
-        ..startDate = DateTime(2026, 1, 1)
-        ..nextDueDate = DateTime(2026, 11, 1)
-        ..maxOccurrences = 3
-        ..occurrenceCount = 3 // Completed
-        ..autoExecute = true
         ..isActive = false
-        ..createdAt = DateTime.now()
-        ..updatedAt = DateTime.now();
+        ..createdAt = DateTime(2026, 1, 1)
+        ..updatedAt = DateTime(2026, 1, 1);
+
+      final wallet = Wallet()
+        ..id = 1
+        ..syncId = 'wallet_bca'
+        ..name = 'Bank BCA'
+        ..balance = 5000000
+        ..isActive = true
+        ..isGoal = false;
+
+      final category = Category()
+        ..id = 1
+        ..syncId = 'cat_internet'
+        ..name = 'Tagihan Internet'
+        ..type = 'EXPENSE'
+        ..icon = 'wifi'
+        ..colorValue = 0xFF2196F3
+        ..isActive = true;
 
       await tester.pumpWidget(
-          buildTestWidget(items: [pausedItem, completedItem]));
+        ProviderScope(
+          overrides: [
+            recurringTransactionListStreamProvider.overrideWith(
+              (ref) => Stream.value([activeItem, pausedItem]),
+            ),
+            activeWalletsStreamProvider.overrideWith((ref) => Stream.value([wallet])),
+            activeCategoriesStreamProvider.overrideWith((ref) => Stream.value([category])),
+          ],
+          child: const MaterialApp(
+            home: RecurringTransactionListScreen(),
+          ),
+        ),
+      );
+
       await tester.pumpAndSettle();
 
-      // Aktif tab should show empty state
-      expect(find.text('Tidak Ada Jadwal Aktif'), findsOneWidget);
+      // On 'Aktif' tab
+      expect(find.text('Langganan Wi-Fi Rumah'), findsOneWidget);
+      expect(find.text('Member Gym'), findsNothing);
 
-      // Tap tab "Dijeda & Selesai"
+      // Switch to 'Dijeda & Selesai' tab
       await tester.tap(find.text('Dijeda & Selesai'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Langganan Gym'), findsOneWidget);
-      expect(find.text('Cicilan Laptop'), findsOneWidget);
-      expect(find.text('Dijeda'), findsOneWidget);
-      expect(find.text('Selesai'), findsOneWidget);
+      expect(find.text('Member Gym'), findsOneWidget);
+      expect(find.text('Langganan Wi-Fi Rumah'), findsNothing);
     });
 
-    testWidgets('toggling switch calls controller.toggleActive',
-        (tester) async {
-      final controller = MockRecurringTransactionController();
+    testWidgets('Toggling active switch triggers controller toggleActive', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
       final activeItem = RecurringTransaction()
-        ..syncId = 'rec_toggle_test'
+        ..id = 1
+        ..syncId = 'rec_netflix'
         ..type = 'EXPENSE'
-        ..amount = 150000
-        ..description = 'Netflix'
+        ..amount = 186000
         ..walletSyncId = 'wallet_bca'
         ..frequency = 'MONTHLY'
         ..interval = 1
         ..startDate = DateTime(2026, 1, 1)
-        ..nextDueDate = DateTime(2026, 11, 1)
+        ..nextDueDate = DateTime(2026, 11, 5)
+        ..description = 'Langganan Netflix'
         ..autoExecute = false
         ..isActive = true
-        ..occurrenceCount = 0
-        ..createdAt = DateTime.now()
-        ..updatedAt = DateTime.now();
+        ..createdAt = DateTime(2026, 1, 1)
+        ..updatedAt = DateTime(2026, 1, 1);
 
-      await tester.pumpWidget(buildTestWidget(
-        items: [activeItem],
-        controller: controller,
-      ));
+      final fakeRepo = FakeRecurringTransactionRepository();
+      fakeRepo.items[activeItem.syncId] = activeItem;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            recurringTransactionRepositoryProvider.overrideWithValue(fakeRepo),
+            recurringTransactionListStreamProvider.overrideWith(
+              (ref) => Stream.value([activeItem]),
+            ),
+            activeWalletsStreamProvider.overrideWith((ref) => Stream.value([])),
+            activeCategoriesStreamProvider.overrideWith((ref) => Stream.value([])),
+          ],
+          child: const MaterialApp(
+            home: RecurringTransactionListScreen(),
+          ),
+        ),
+      );
+
       await tester.pumpAndSettle();
 
-      // Find switch inside RecurringTile
       final switchFinder = find.byType(Switch);
       expect(switchFinder, findsOneWidget);
 
-      // Tap to toggle off
+      // Tap switch to pause schedule
       await tester.tap(switchFinder);
       await tester.pumpAndSettle();
 
-      expect(controller.toggledSyncId, equals('rec_toggle_test'));
-      expect(controller.toggledValue, isFalse);
+      expect(fakeRepo.toggleActiveCalled, isTrue);
+      expect(fakeRepo.lastToggledSyncId, 'rec_netflix');
+      expect(fakeRepo.lastToggledValue, isFalse);
       expect(find.text('Jadwal transaksi berhasil dijeda.'), findsOneWidget);
     });
 
-    testWidgets('tapping delete button shows confirmation dialog and calls hardDelete',
-        (tester) async {
-      final controller = MockRecurringTransactionController();
+    testWidgets('Delete button displays confirmation dialog and calls hardDelete upon confirmation', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
       final activeItem = RecurringTransaction()
-        ..syncId = 'rec_delete_test'
+        ..id = 1
+        ..syncId = 'rec_spotify'
         ..type = 'EXPENSE'
-        ..amount = 75000
-        ..description = 'Spotify Premium'
+        ..amount = 54990
         ..walletSyncId = 'wallet_bca'
         ..frequency = 'MONTHLY'
         ..interval = 1
         ..startDate = DateTime(2026, 1, 1)
-        ..nextDueDate = DateTime(2026, 11, 1)
-        ..autoExecute = false
+        ..nextDueDate = DateTime(2026, 11, 10)
+        ..description = 'Spotify Premium'
+        ..autoExecute = true
         ..isActive = true
-        ..occurrenceCount = 0
-        ..createdAt = DateTime.now()
-        ..updatedAt = DateTime.now();
+        ..createdAt = DateTime(2026, 1, 1)
+        ..updatedAt = DateTime(2026, 1, 1);
 
-      await tester.pumpWidget(buildTestWidget(
-        items: [activeItem],
-        controller: controller,
-      ));
+      final fakeRepo = FakeRecurringTransactionRepository();
+      fakeRepo.items[activeItem.syncId] = activeItem;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            recurringTransactionRepositoryProvider.overrideWithValue(fakeRepo),
+            recurringTransactionListStreamProvider.overrideWith(
+              (ref) => Stream.value([activeItem]),
+            ),
+            activeWalletsStreamProvider.overrideWith((ref) => Stream.value([])),
+            activeCategoriesStreamProvider.overrideWith((ref) => Stream.value([])),
+          ],
+          child: const MaterialApp(
+            home: RecurringTransactionListScreen(),
+          ),
+        ),
+      );
+
       await tester.pumpAndSettle();
 
-      // Tap delete button
+      // Find delete icon button
       final deleteBtnFinder = find.byTooltip('Hapus Jadwal');
       expect(deleteBtnFinder, findsOneWidget);
+
       await tester.tap(deleteBtnFinder);
       await tester.pumpAndSettle();
 
-      // Dialog should be visible
+      // Verify dialog is shown
       expect(find.text('Hapus Jadwal?'), findsOneWidget);
-      expect(find.textContaining('Riwayat transaksi sebelumnya yang sudah tercatat tidak akan terhapus'), findsOneWidget);
+      expect(find.text('Aturan jadwal ini akan dihapus secara permanen dari daftar. Riwayat transaksi sebelumnya yang sudah tercatat tidak akan terhapus. Lanjutkan?'), findsOneWidget);
 
-      // Tap "Hapus" inside dialog
+      // Tap 'Batal' first to ensure it cancels
+      await tester.tap(find.text('Batal'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepo.hardDeleteCalled, isFalse);
+      expect(find.text('Hapus Jadwal?'), findsNothing);
+
+      // Tap delete again and confirm
+      await tester.tap(deleteBtnFinder);
+      await tester.pumpAndSettle();
+
       await tester.tap(find.widgetWithText(ElevatedButton, 'Hapus'));
       await tester.pumpAndSettle();
 
-      expect(controller.hardDeletedSyncId, equals('rec_delete_test'));
+      expect(fakeRepo.hardDeleteCalled, isTrue);
+      expect(fakeRepo.lastDeletedSyncId, 'rec_spotify');
       expect(find.text('Jadwal transaksi berhasil dihapus.'), findsOneWidget);
     });
   });

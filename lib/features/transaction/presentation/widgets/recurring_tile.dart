@@ -120,7 +120,10 @@ class RecurringTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Row 1: Badges & Status
-            Row(
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(),
+              child: Row(
               children: [
                 // Type Badge
                 Container(
@@ -223,6 +226,7 @@ class RecurringTile extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
             ),
             const SizedBox(height: 12),
 

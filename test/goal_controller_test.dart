@@ -5,6 +5,7 @@ import 'package:catatuang/features/settings/domain/app_settings.dart';
 import 'package:catatuang/features/transaction/data/transaction_repository.dart';
 import 'package:catatuang/features/wallet/data/wallet_repository.dart';
 import 'package:catatuang/features/wallet/domain/wallet.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class MockWalletRepository implements WalletRepository {
@@ -40,6 +41,37 @@ class MockWalletRepository implements WalletRepository {
     return walletsBySyncId[syncId];
   }
 
+  int? lastUpdatedId;
+  String? lastUpdatedName;
+  double? lastUpdatedTargetAmount;
+  DateTime? lastUpdatedTargetDate;
+  int? lastSoftDeletedId;
+
+  @override
+  Future<Wallet> updateGoal({
+    required int id,
+    required String name,
+    required double targetAmount,
+    DateTime? targetDate,
+  }) async {
+    lastUpdatedId = id;
+    lastUpdatedName = name;
+    lastUpdatedTargetAmount = targetAmount;
+    lastUpdatedTargetDate = targetDate;
+    final w = createdWallets.firstWhere((element) => element.id == id);
+    w.name = name;
+    w.targetAmount = targetAmount;
+    w.targetDate = targetDate;
+    return w;
+  }
+
+  @override
+  Future<void> softDeleteWallet(int id) async {
+    lastSoftDeletedId = id;
+    final w = createdWallets.firstWhere((element) => element.id == id);
+    w.isActive = false;
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -50,6 +82,15 @@ class MockTransactionRepository implements TransactionRepository {
   String? lastGoalSyncId;
   double? lastAmount;
 
+  bool withdrawSavingsCalled = false;
+  String? lastWithdrawGoalSyncId;
+  String? lastWithdrawDestSyncId;
+  double? lastWithdrawAmount;
+  String? lastWithdrawNotes;
+
+  bool shouldThrowOnAllocate = false;
+  bool shouldThrowOnWithdraw = false;
+
   @override
   Future<void> allocateSavings({
     required String sourceWalletSyncId,
@@ -57,10 +98,31 @@ class MockTransactionRepository implements TransactionRepository {
     required double amount,
     required DateTime date,
   }) async {
+    if (shouldThrowOnAllocate) {
+      throw Exception('Gagal alokasi tabungan pada repositori');
+    }
     allocateSavingsCalled = true;
     lastSourceSyncId = sourceWalletSyncId;
     lastGoalSyncId = goalWalletSyncId;
     lastAmount = amount;
+  }
+
+  @override
+  Future<void> withdrawSavings({
+    required String goalWalletSyncId,
+    required String destinationWalletSyncId,
+    required double amount,
+    required DateTime date,
+    String? notes,
+  }) async {
+    if (shouldThrowOnWithdraw) {
+      throw Exception('Gagal pencairan tabungan pada repositori');
+    }
+    withdrawSavingsCalled = true;
+    lastWithdrawGoalSyncId = goalWalletSyncId;
+    lastWithdrawDestSyncId = destinationWalletSyncId;
+    lastWithdrawAmount = amount;
+    lastWithdrawNotes = notes;
   }
 
   @override
@@ -274,6 +336,128 @@ void main() {
       // Benar-benar tidak ada record wallet goal baru yang dibuat di Isar
       expect(walletRepo.createdWallets, isEmpty);
       expect(txRepo.allocateSavingsCalled, isFalse);
+    });
+  });
+
+  group('GoalController Operations & State Tests (Task 4.1)', () {
+    test('topUpGoal sets loading and data(null) state on success', () async {
+      final states = <AsyncValue<void>>[];
+      controller.addListener((state) => states.add(state));
+
+      await controller.topUpGoal(
+        goalWalletSyncId: 'goal_1',
+        sourceWalletSyncId: 'wallet_source',
+        amount: 250000,
+        date: DateTime(2026, 10, 25),
+      );
+
+      expect(txRepo.allocateSavingsCalled, isTrue);
+      expect(txRepo.lastGoalSyncId, 'goal_1');
+      expect(txRepo.lastSourceSyncId, 'wallet_source');
+      expect(txRepo.lastAmount, 250000);
+      expect(controller.state, const AsyncValue<void>.data(null));
+      expect(states.any((s) => s is AsyncLoading), isTrue);
+    });
+
+    test('topUpGoal catches error and sets state to error', () async {
+      txRepo.shouldThrowOnAllocate = true;
+
+      await controller.topUpGoal(
+        goalWalletSyncId: 'goal_1',
+        sourceWalletSyncId: 'wallet_source',
+        amount: 100000,
+        date: DateTime(2026, 10, 25),
+      );
+
+      expect(controller.state.hasError, isTrue);
+      expect(controller.state.error.toString(), contains('Gagal alokasi tabungan'));
+    });
+
+    test('withdrawGoal executes withdrawSavings and returns true on success', () async {
+      final success = await controller.withdrawGoal(
+        goalWalletSyncId: 'goal_laptop',
+        destinationWalletSyncId: 'wallet_bca',
+        amount: 5000000,
+        date: DateTime(2026, 10, 26),
+        notes: 'Pencairan beli laptop baru',
+      );
+
+      expect(success, isTrue);
+      expect(txRepo.withdrawSavingsCalled, isTrue);
+      expect(txRepo.lastWithdrawGoalSyncId, 'goal_laptop');
+      expect(txRepo.lastWithdrawDestSyncId, 'wallet_bca');
+      expect(txRepo.lastWithdrawAmount, 5000000);
+      expect(txRepo.lastWithdrawNotes, 'Pencairan beli laptop baru');
+      expect(controller.state, const AsyncValue<void>.data(null));
+    });
+
+    test('withdrawGoal returns false and sets state to error on failure', () async {
+      txRepo.shouldThrowOnWithdraw = true;
+
+      final success = await controller.withdrawGoal(
+        goalWalletSyncId: 'goal_laptop',
+        destinationWalletSyncId: 'wallet_bca',
+        amount: 5000000,
+        date: DateTime(2026, 10, 26),
+      );
+
+      expect(success, isFalse);
+      expect(controller.state.hasError, isTrue);
+      expect(controller.state.error.toString(), contains('Gagal pencairan tabungan'));
+    });
+
+    test('updateGoal updates target and returns true on success', () async {
+      await controller.addGoal(
+        name: 'Target Lama',
+        targetAmount: 5000000,
+      );
+      final created = walletRepo.createdWallets.first;
+
+      final success = await controller.updateGoal(
+        id: created.id,
+        name: 'Target Diperbarui',
+        targetAmount: 8000000,
+        targetDate: DateTime(2026, 12, 31),
+      );
+
+      expect(success, isTrue);
+      expect(walletRepo.lastUpdatedId, created.id);
+      expect(walletRepo.lastUpdatedName, 'Target Diperbarui');
+      expect(walletRepo.lastUpdatedTargetAmount, 8000000);
+      expect(created.name, 'Target Diperbarui');
+      expect(controller.state, const AsyncValue<void>.data(null));
+    });
+
+    test('deleteGoal throws and returns false if goal still has positive balance', () async {
+      await controller.addGoal(
+        name: 'Goal Bersaldo',
+        targetAmount: 2000000,
+      );
+      final created = walletRepo.createdWallets.first;
+      created.balance = 150000; // Masih ada saldo
+
+      final success = await controller.deleteGoal(created);
+
+      expect(success, isFalse);
+      expect(created.isActive, isTrue); // Tidak di-soft delete
+      expect(controller.state.hasError, isTrue);
+      expect(controller.state.error.toString(), contains('Tidak dapat menghapus tabungan yang masih memiliki saldo'));
+    });
+
+    test('deleteGoal succeeds and soft-deletes wallet if balance is 0', () async {
+      await controller.addGoal(
+        name: 'Goal Kosong',
+        targetAmount: 1000000,
+      );
+      final created = walletRepo.createdWallets.first;
+      created.balance = 0.0; // Saldo 0
+
+      final success = await controller.deleteGoal(created);
+
+      expect(success, isTrue);
+      expect(walletRepo.lastSoftDeletedId, created.id);
+      expect(created.isActive, isFalse);
+      expect(controller.state, const AsyncValue<void>.data(null));
     });
   });
 }
