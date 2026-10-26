@@ -185,6 +185,12 @@ class DebtRepository {
         if (wallet == null) {
           throw Exception('Dompet tidak ditemukan.');
         }
+        if (!wallet.isActive) {
+          throw Exception('Tidak dapat menggunakan dompet yang dinonaktifkan.');
+        }
+        if (wallet.isGoal) {
+          throw Exception('Dompet tidak boleh berupa kantong tabungan impian.');
+        }
 
         final tx = Transaction()
           ..syncId = _uuid.v4()
@@ -248,6 +254,12 @@ class DebtRepository {
     final wallet = await _isar.wallets.filter().syncIdEqualTo(walletSyncId).findFirst();
     if (wallet == null) {
       throw Exception('Dompet tidak ditemukan.');
+    }
+    if (!wallet.isActive) {
+      throw Exception('Tidak dapat menggunakan dompet yang dinonaktifkan.');
+    }
+    if (wallet.isGoal) {
+      throw Exception('Dompet tidak boleh berupa kantong tabungan impian.');
     }
 
     final now = DateTime.now();

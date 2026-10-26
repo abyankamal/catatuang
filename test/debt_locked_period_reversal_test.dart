@@ -229,4 +229,114 @@ void main() {
       expect(debt.isActive, isFalse);
     });
   });
+
+  group('DebtRepository Wallet Active and Non-Goal Validation Tests', () {
+    void validateWalletForDebt({
+      required Wallet? wallet,
+    }) {
+      if (wallet == null) {
+        throw Exception('Dompet tidak ditemukan.');
+      }
+      if (!wallet.isActive) {
+        throw Exception('Tidak dapat menggunakan dompet yang dinonaktifkan.');
+      }
+      if (wallet.isGoal) {
+        throw Exception('Dompet tidak boleh berupa kantong tabungan impian.');
+      }
+    }
+
+    test('createDebt with inactive wallet throws informative Exception', () {
+      final inactiveWallet = Wallet()
+        ..id = 10
+        ..syncId = 'wallet_inactive'
+        ..name = 'Dompet Lama'
+        ..balance = 500000.0
+        ..isActive = false;
+
+      expect(
+        () => validateWalletForDebt(wallet: inactiveWallet),
+        throwsA(
+          predicate(
+            (e) =>
+                e is Exception &&
+                e.toString().contains('Tidak dapat menggunakan dompet yang dinonaktifkan.'),
+          ),
+        ),
+      );
+    });
+
+    test('createDebt with goal wallet throws informative Exception', () {
+      final goalWallet = Wallet()
+        ..id = 11
+        ..syncId = 'wallet_goal'
+        ..name = 'Beli Mobil'
+        ..balance = 10000000.0
+        ..isActive = true
+        ..isGoal = true;
+
+      expect(
+        () => validateWalletForDebt(wallet: goalWallet),
+        throwsA(
+          predicate(
+            (e) =>
+                e is Exception &&
+                e.toString().contains('Dompet tidak boleh berupa kantong tabungan impian.'),
+          ),
+        ),
+      );
+    });
+
+    test('recordPayment with inactive wallet throws informative Exception', () {
+      final inactiveWallet = Wallet()
+        ..id = 12
+        ..syncId = 'wallet_inactive_payment'
+        ..name = 'Rekening Tutup'
+        ..balance = 200000.0
+        ..isActive = false;
+
+      expect(
+        () => validateWalletForDebt(wallet: inactiveWallet),
+        throwsA(
+          predicate(
+            (e) =>
+                e is Exception &&
+                e.toString().contains('Tidak dapat menggunakan dompet yang dinonaktifkan.'),
+          ),
+        ),
+      );
+    });
+
+    test('recordPayment with goal wallet throws informative Exception', () {
+      final goalWallet = Wallet()
+        ..id = 13
+        ..syncId = 'wallet_goal_payment'
+        ..name = 'Dana Darurat'
+        ..balance = 5000000.0
+        ..isActive = true
+        ..isGoal = true;
+
+      expect(
+        () => validateWalletForDebt(wallet: goalWallet),
+        throwsA(
+          predicate(
+            (e) =>
+                e is Exception &&
+                e.toString().contains('Dompet tidak boleh berupa kantong tabungan impian.'),
+          ),
+        ),
+      );
+    });
+
+    test('Active regular wallet succeeds validation for createDebt & recordPayment', () {
+      final validWallet = Wallet()
+        ..id = 14
+        ..syncId = 'wallet_valid'
+        ..name = 'BCA Utama'
+        ..balance = 1500000.0
+        ..isActive = true
+        ..isGoal = false;
+
+      expect(() => validateWalletForDebt(wallet: validWallet), returnsNormally);
+    });
+  });
 }
