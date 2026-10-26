@@ -102,16 +102,15 @@ void main() {
       expect(destWallet.balance, 50000.0);
     });
 
-    test('updateTransaction for EXPENSE throws Exception when new amount exceeds available wallet balance', () {
-      // Wallet starting with balance 50k
+    test('updateTransaction for EXPENSE on regular wallet allows negative balance', () {
       final wallet = Wallet()
         ..id = 1
         ..syncId = 'wallet_main'
         ..name = 'Dompet Utama'
         ..balance = 50000.0
-        ..isActive = true;
+        ..isActive = true
+        ..isGoal = false;
 
-      // Existing transaction was an EXPENSE of 30k (so wallet balance before was 80k, currently 50k)
       final existingTx = Transaction()
         ..id = 10
         ..syncId = 'tx_10'
@@ -120,9 +119,9 @@ void main() {
         ..walletSyncId = wallet.syncId
         ..date = DateTime(2026, 10, 1);
 
-      // User tries to edit existingTx to EXPENSE of 100k
+      // User edits existingTx to EXPENSE of 100k
       // After reverting old 30k, effective balance is 50k + 30k = 80k.
-      // 80k is insufficient for 100k expense!
+      // 80k - 100k = -20k. For regular wallet (isGoal == false), this is allowed.
       const newAmount = 100000.0;
 
       void executeUpdateSimulation({
@@ -131,7 +130,6 @@ void main() {
         required String newType,
         required double newAmount,
       }) {
-        // Revert old transaction effect
         var effectiveBalance = targetWallet.balance;
         if (oldTx.type == 'INCOME') {
           effectiveBalance -= oldTx.amount;
@@ -139,10 +137,64 @@ void main() {
           effectiveBalance += oldTx.amount;
         }
 
-        // Check new transaction effect
         if (newType == 'EXPENSE') {
-          if (effectiveBalance < newAmount) {
-            throw Exception('Saldo kantong "${targetWallet.name}" tidak mencukupi untuk transaksi ini.');
+          if (targetWallet.isGoal && effectiveBalance < newAmount) {
+            throw Exception('Saldo kantong tabungan "${targetWallet.name}" tidak mencukupi untuk transaksi ini.');
+          }
+          effectiveBalance -= newAmount;
+        } else if (newType == 'INCOME') {
+          effectiveBalance += newAmount;
+        }
+
+        targetWallet.balance = effectiveBalance;
+      }
+
+      executeUpdateSimulation(
+        oldTx: existingTx,
+        targetWallet: wallet,
+        newType: 'EXPENSE',
+        newAmount: newAmount,
+      );
+
+      // Saldo kantong reguler terpotong menjadi minus tanpa exception
+      expect(wallet.balance, -20000.0);
+    });
+
+    test('updateTransaction for EXPENSE on goal wallet throws Exception when balance is insufficient', () {
+      final goalWallet = Wallet()
+        ..id = 5
+        ..syncId = 'wallet_goal'
+        ..name = 'Tabungan Liburan'
+        ..balance = 50000.0
+        ..isActive = true
+        ..isGoal = true;
+
+      final existingTx = Transaction()
+        ..id = 11
+        ..syncId = 'tx_11'
+        ..type = 'EXPENSE'
+        ..amount = 30000.0
+        ..walletSyncId = goalWallet.syncId
+        ..date = DateTime(2026, 10, 1);
+
+      const newAmount = 100000.0; // Needs 100k, available 80k
+
+      void executeUpdateSimulation({
+        required Transaction oldTx,
+        required Wallet targetWallet,
+        required String newType,
+        required double newAmount,
+      }) {
+        var effectiveBalance = targetWallet.balance;
+        if (oldTx.type == 'INCOME') {
+          effectiveBalance -= oldTx.amount;
+        } else if (oldTx.type == 'EXPENSE') {
+          effectiveBalance += oldTx.amount;
+        }
+
+        if (newType == 'EXPENSE') {
+          if (targetWallet.isGoal && effectiveBalance < newAmount) {
+            throw Exception('Saldo kantong tabungan "${targetWallet.name}" tidak mencukupi untuk transaksi ini.');
           }
           effectiveBalance -= newAmount;
         } else if (newType == 'INCOME') {
@@ -155,7 +207,7 @@ void main() {
       expect(
         () => executeUpdateSimulation(
           oldTx: existingTx,
-          targetWallet: wallet,
+          targetWallet: goalWallet,
           newType: 'EXPENSE',
           newAmount: newAmount,
         ),
@@ -163,13 +215,12 @@ void main() {
           predicate(
             (e) =>
                 e is Exception &&
-                e.toString().contains('Saldo kantong "Dompet Utama" tidak mencukupi untuk transaksi ini.'),
+                e.toString().contains('Saldo kantong tabungan "Tabungan Liburan" tidak mencukupi untuk transaksi ini.'),
           ),
         ),
       );
 
-      // Verify original wallet balance was not corrupted
-      expect(wallet.balance, 50000.0);
+      expect(goalWallet.balance, 50000.0);
     });
 
     test('updateTransaction for EXPENSE succeeds when balance after reversal is sufficient', () {
@@ -178,7 +229,8 @@ void main() {
         ..syncId = 'wallet_main'
         ..name = 'Dompet Utama'
         ..balance = 50000.0
-        ..isActive = true;
+        ..isActive = true
+        ..isGoal = false;
 
       final existingTx = Transaction()
         ..id = 10
@@ -205,8 +257,8 @@ void main() {
         }
 
         if (newType == 'EXPENSE') {
-          if (effectiveBalance < newAmount) {
-            throw Exception('Saldo kantong "${targetWallet.name}" tidak mencukupi untuk transaksi ini.');
+          if (targetWallet.isGoal && effectiveBalance < newAmount) {
+            throw Exception('Saldo kantong tabungan "${targetWallet.name}" tidak mencukupi untuk transaksi ini.');
           }
           effectiveBalance -= newAmount;
         } else if (newType == 'INCOME') {
@@ -226,20 +278,22 @@ void main() {
       expect(wallet.balance, 10000.0);
     });
 
-    test('updateTransaction changing wallet checks destination wallet balance for EXPENSE', () {
+    test('updateTransaction changing wallet checks destination goal wallet balance for EXPENSE', () {
       final oldWallet = Wallet()
         ..id = 1
         ..syncId = 'wallet_old'
         ..name = 'Dompet Lama'
         ..balance = 50000.0
-        ..isActive = true;
+        ..isActive = true
+        ..isGoal = false;
 
-      final newWallet = Wallet()
+      final newGoalWallet = Wallet()
         ..id = 2
-        ..syncId = 'wallet_new'
-        ..name = 'Dompet Baru'
+        ..syncId = 'wallet_new_goal'
+        ..name = 'Tabungan Haji'
         ..balance = 10000.0 // Only 10k
-        ..isActive = true;
+        ..isActive = true
+        ..isGoal = true;
 
       final existingTx = Transaction()
         ..id = 15
@@ -249,7 +303,7 @@ void main() {
         ..walletSyncId = oldWallet.syncId
         ..date = DateTime(2026, 10, 1);
 
-      // Trying to move 25k expense to newWallet which only has 10k
+      // Trying to move 25k expense to newGoalWallet which only has 10k
       void executeMoveWalletSimulation({
         required Transaction oldTx,
         required Wallet sourceWallet,
@@ -260,10 +314,10 @@ void main() {
         sourceWallet.balance += oldTx.amount;
 
         // Apply on new wallet
-        if (targetWallet.balance < amount) {
+        if (targetWallet.isGoal && targetWallet.balance < amount) {
           // Rollback source wallet modification (mimicking atomic writeTxn rollback on exception)
           sourceWallet.balance -= oldTx.amount;
-          throw Exception('Saldo kantong "${targetWallet.name}" tidak mencukupi untuk transaksi ini.');
+          throw Exception('Saldo kantong tabungan "${targetWallet.name}" tidak mencukupi untuk transaksi ini.');
         }
         targetWallet.balance -= amount;
       }
@@ -272,21 +326,21 @@ void main() {
         () => executeMoveWalletSimulation(
           oldTx: existingTx,
           sourceWallet: oldWallet,
-          targetWallet: newWallet,
+          targetWallet: newGoalWallet,
           amount: 25000.0,
         ),
         throwsA(
           predicate(
             (e) =>
                 e is Exception &&
-                e.toString().contains('Saldo kantong "Dompet Baru" tidak mencukupi untuk transaksi ini.'),
+                e.toString().contains('Saldo kantong tabungan "Tabungan Haji" tidak mencukupi untuk transaksi ini.'),
           ),
         ),
       );
 
       // Balances preserved
       expect(oldWallet.balance, 50000.0);
-      expect(newWallet.balance, 10000.0);
+      expect(newGoalWallet.balance, 10000.0);
     });
   });
 }

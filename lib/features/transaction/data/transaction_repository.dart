@@ -609,8 +609,11 @@ class TransactionRepository {
       if (type == 'INCOME') {
         newWallet.balance += amount;
       } else if (type == 'EXPENSE') {
-        if (newWallet.balance < amount) {
-          throw Exception('Saldo kantong "${newWallet.name}" tidak mencukupi untuk transaksi ini.');
+        // Penyelarasan Aturan Saldo Minimum (Task 2.1 & AGENTS.md §4):
+        // Dompet reguler diizinkan minus, hanya kantong Tabungan Impian (isGoal == true)
+        // yang dilarang memiliki saldo negatif.
+        if (newWallet.isGoal && newWallet.balance < amount) {
+          throw Exception('Saldo kantong tabungan "${newWallet.name}" tidak mencukupi untuk transaksi ini.');
         }
         newWallet.balance -= amount;
       }
