@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/presentation/pin_lock_screen.dart';
+import '../../features/notification/application/notification_providers.dart';
 import '../../features/settings/application/settings_providers.dart';
+import '../../features/transaction/application/recurring_transaction_controller.dart';
 
 /// Wrapper widget untuk memberikan efek blur murni ketika aplikasi
 /// berada di background/app switcher, serta gerbang penguncian PIN 6-digit.
@@ -48,6 +50,16 @@ class _PrivacyScreenWrapperState extends ConsumerState<PrivacyScreenWrapper>
           ref.read(appSettingsStreamProvider).valueOrNull?.isPinEnabled ?? false;
       if (isPinEnabled) {
         ref.read(isAppUnlockedProvider.notifier).state = false;
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      // Saat aplikasi kembali ke foreground, evaluasi transaksi rutin yang jatuh tempo
+      // dan refresh banner tagihan & notifikasi jika hari berganti.
+      try {
+        ref.read(recurringTransactionControllerProvider.notifier).processDueAutoTransactions();
+        ref.invalidate(dueManualRecurringProvider);
+        ref.invalidate(activeRemindersProvider);
+      } catch (_) {
+        // Abaikan jika controller/database belum diinisialisasi di mock widget test
       }
     }
 

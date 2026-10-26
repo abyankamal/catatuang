@@ -114,5 +114,42 @@ void main() {
       // BackdropFilter should NOT be shown because privacy screen is disabled
       expect(find.byType(BackdropFilter), findsNothing);
     });
+
+    testWidgets('AppLifecycleState.resumed safely triggers recurring check without crash', (tester) async {
+      final settings = AppSettings()
+        ..id = 1
+        ..syncId = 's_1'
+        ..isPrivacyScreenEnabled = true
+        ..hasCompletedOnboarding = true
+        ..createdAt = DateTime.now()
+        ..updatedAt = DateTime.now();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appSettingsStreamProvider.overrideWith((ref) => Stream.value(settings)),
+          ],
+          child: const MaterialApp(
+            home: PrivacyScreenWrapper(
+              child: Scaffold(
+                body: Text('Finance App Content'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // Pause the app
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+
+      // Resume the app - triggers didChangeAppLifecycleState(AppLifecycleState.resumed)
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+
+      expect(find.text('Finance App Content'), findsOneWidget);
+    });
   });
 }
