@@ -42,6 +42,11 @@ class WalletRepository {
         .watch(fireImmediately: true);
   }
 
+  /// Ambil dompet berdasarkan syncId
+  Future<Wallet?> getWalletBySyncId(String syncId) async {
+    return await _isar.wallets.filter().syncIdEqualTo(syncId).findFirst();
+  }
+
   /// Ambil semua kantong aktif secara synchronous / async
   Future<List<Wallet>> getActiveWallets() async {
     return await _isar.wallets

@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/exceptions/locked_period_exception.dart';
+import '../../settings/data/app_settings_repository.dart';
 import '../../wallet/data/wallet_repository.dart';
 import '../../wallet/domain/wallet.dart';
 import '../../transaction/data/transaction_repository.dart';
@@ -17,8 +19,13 @@ final activeRegularWalletsStreamProvider = StreamProvider<List<Wallet>>((ref) {
 class GoalController extends StateNotifier<AsyncValue<void>> {
   final WalletRepository _walletRepo;
   final TransactionRepository _transactionRepo;
+  final AppSettingsRepository _settingsRepo;
 
-  GoalController(this._walletRepo, this._transactionRepo) : super(const AsyncValue.data(null));
+  GoalController(
+    this._walletRepo,
+    this._transactionRepo,
+    this._settingsRepo,
+  ) : super(const AsyncValue.data(null));
 
   Future<void> addGoal({
     required String name,
@@ -29,25 +36,58 @@ class GoalController extends StateNotifier<AsyncValue<void>> {
   }) async {
     state = const AsyncValue.loading();
     try {
+      final now = DateTime.now();
+
+      // Strict Pre-Validation (Task 1.3 & AGENTS.md §4)
+      if (initialBalance > 0) {
+        if (sourceWalletSyncId == null || sourceWalletSyncId.isEmpty) {
+          throw Exception('Dompet sumber wajib dipilih jika menyertakan saldo awal.');
+        }
+
+        // 1. Pengecekan periode tutup buku sebelum mutasi atau pembuatan goal
+        final settings = await _settingsRepo.getOrInitSettings();
+        if (settings.lockedUntil != null && !now.isAfter(settings.lockedUntil!)) {
+          throw LockedPeriodException();
+        }
+
+        // 2. Validasi dompet sumber: ada, aktif, bukan dompet tabungan (isGoal == false)
+        final sourceWallet = await _walletRepo.getWalletBySyncId(sourceWalletSyncId);
+        if (sourceWallet == null || !sourceWallet.isActive) {
+          throw Exception('Dompet sumber tidak ditemukan atau tidak aktif.');
+        }
+
+        if (sourceWallet.isGoal) {
+          throw Exception('Dompet sumber tidak boleh berupa kantong tabungan impian.');
+        }
+
+        // 3. Validasi kecukupan saldo dompet sumber
+        if (sourceWallet.balance < initialBalance) {
+          throw Exception('Saldo dompet "${sourceWallet.name}" tidak mencukupi untuk saldo awal tabungan.');
+        }
+      }
+
+      // Setelah seluruh validasi lolos, baru buat entitas goal di Isar
       final goal = await _walletRepo.createGoal(
         name: name,
         targetAmount: targetAmount,
         targetDate: targetDate,
-        initialBalance: 0, // We will use allocateSavings to transfer the initial balance
+        initialBalance: 0,
       );
 
+      // Alokasikan saldo awal via mekanisme Transfer 3-Transaction
       if (initialBalance > 0 && sourceWalletSyncId != null) {
         await _transactionRepo.allocateSavings(
           sourceWalletSyncId: sourceWalletSyncId,
           goalWalletSyncId: goal.syncId,
           amount: initialBalance,
-          date: DateTime.now(),
+          date: now,
         );
       }
 
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+      rethrow;
     }
   }
 
@@ -140,5 +180,6 @@ class GoalController extends StateNotifier<AsyncValue<void>> {
 final goalControllerProvider = StateNotifierProvider<GoalController, AsyncValue<void>>((ref) {
   final walletRepo = ref.watch(walletRepositoryProvider);
   final txRepo = ref.watch(transactionRepositoryProvider);
-  return GoalController(walletRepo, txRepo);
+  final settingsRepo = ref.watch(appSettingsRepositoryProvider);
+  return GoalController(walletRepo, txRepo, settingsRepo);
 });

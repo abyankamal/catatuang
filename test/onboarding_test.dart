@@ -133,6 +133,12 @@ class FakeWalletRepository implements WalletRepository {
   }
 
   @override
+  Future<Wallet?> getWalletBySyncId(String syncId) async {
+    final matches = wallets.where((w) => w.syncId == syncId);
+    return matches.isNotEmpty ? matches.first : null;
+  }
+
+  @override
   Future<void> softDeleteWallet(int id) async {}
 }
 
