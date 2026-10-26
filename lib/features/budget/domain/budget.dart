@@ -25,18 +25,4 @@ class Budget {
 
   late DateTime createdAt;
   late DateTime updatedAt;
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id == Isar.autoIncrement ? null : id,
-      'syncId': syncId,
-      'categorySyncId': categorySyncId,
-      'monthlyLimit': monthlyLimit,
-      'month': month,
-      'year': year,
-      'isActive': isActive,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-    };
-  }
 }

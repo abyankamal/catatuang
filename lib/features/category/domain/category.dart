@@ -22,18 +22,4 @@ class Category {
   
   late DateTime createdAt;
   late DateTime updatedAt;
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id == Isar.autoIncrement ? null : id,
-      'syncId': syncId,
-      'name': name,
-      'type': type,
-      'icon': icon,
-      'colorValue': colorValue,
-      'isActive': isActive,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-    };
-  }
 }
