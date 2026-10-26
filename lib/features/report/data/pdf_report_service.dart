@@ -28,10 +28,22 @@ class PdfReportService {
     return DateFormat('d MMM yyyy', 'id_ID').format(date);
   }
 
+  /// Membersihkan teks dari karakter di luar ISO-8859-1 (Latin-1) / Emoji
+  /// agar tidak merusak dokumen PDF atau memicu error font Helvetica standard.
+  static String sanitizeText(String text) {
+    if (text.isEmpty) return text;
+    // Hapus karakter Unicode di luar Latin-1 (termasuk emoji dan simbol tak didukung Helvetica)
+    // Karakter yang dipertahankan: kontrol dasar (tab, newline), spasi, printable ASCII (0x20-0x7E),
+    // serta Latin-1 Supplement (0xA0-0xFF) untuk karakter beraksen.
+    final sanitized = text.replaceAll(RegExp(r'[^\x20-\x7E\xA0-\xFF]'), '').trim();
+    return sanitized.isEmpty ? '-' : sanitized;
+  }
+
   static Future<Uint8List> generatePdf(DetailedMonthlyReport data) async {
+    final sanitizedUserName = sanitizeText(data.userName);
     final pdf = pw.Document(
       title: 'Laporan Keuangan CatatUang - ${_monthNames[data.month - 1]} ${data.year}',
-      author: data.userName,
+      author: sanitizedUserName,
     );
 
     final periodStr = '${_monthNames[data.month - 1]} ${data.year}';
@@ -146,7 +158,7 @@ class PdfReportService {
                     ),
                     pw.SizedBox(height: 4),
                     pw.Text(
-                      'Pengguna: ${data.userName}',
+                      'Pengguna: $sanitizedUserName',
                       style: pw.TextStyle(fontSize: 12, color: subTextColor),
                     ),
                   ],
@@ -281,7 +293,7 @@ class PdfReportService {
                   ...data.summary.categoryExpenses.map((cat) {
                     return pw.TableRow(
                       children: [
-                        _buildTableCell(cat.categoryName),
+                        _buildTableCell(sanitizeText(cat.categoryName)),
                         _buildTableCell(_formatRupiah(cat.totalAmount), alignRight: true),
                         _buildTableCell('${cat.percentage.toStringAsFixed(1)}%', alignRight: true),
                       ],
@@ -322,7 +334,7 @@ class PdfReportService {
                   ...data.wallets.map((w) {
                     return pw.TableRow(
                       children: [
-                        _buildTableCell(w.name),
+                        _buildTableCell(sanitizeText(w.name)),
                         _buildTableCell(w.isGoal ? 'Target Tabungan' : 'Dompet Reguler'),
                         _buildTableCell(_formatRupiah(w.balance), alignRight: true),
                       ],
@@ -394,9 +406,9 @@ class PdfReportService {
                     return pw.TableRow(
                       children: [
                         _buildTableCell(_formatShortDate(tx.date)),
-                        _buildTableCell(tx.categoryName),
-                        _buildTableCell(tx.walletName),
-                        _buildTableCell(tx.notes ?? '-'),
+                        _buildTableCell(sanitizeText(tx.categoryName)),
+                        _buildTableCell(sanitizeText(tx.walletName)),
+                        _buildTableCell(sanitizeText(tx.notes ?? '-')),
                         _buildTableCell(typeLabel),
                         _buildTableCell(
                           _formatRupiah(tx.amount),

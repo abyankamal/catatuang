@@ -96,6 +96,76 @@ void main() {
       expect(header, '%PDF-');
     });
 
+    test('PdfReportService.sanitizeText removes emojis and preserves Latin-1 text correctly', () {
+      expect(PdfReportService.sanitizeText('Makan Bakso 🍜🔥'), 'Makan Bakso');
+      expect(PdfReportService.sanitizeText('Dompet Utama 💳✨'), 'Dompet Utama');
+      expect(PdfReportService.sanitizeText('Gaji 💰'), 'Gaji');
+      expect(PdfReportService.sanitizeText('Café & Naïve résumé'), 'Café & Naïve résumé');
+      expect(PdfReportService.sanitizeText('   '), '-');
+      expect(PdfReportService.sanitizeText('🎉🥳'), '-');
+    });
+
+    test('PdfReportService.generatePdf handles inputs filled with Unicode and emojis without crash', () async {
+      final summary = MonthlyReportData(
+        totalIncome: 10000000,
+        totalExpense: 2500000,
+        netIncome: 7500000,
+        categoryExpenses: const [
+          CategoryExpenseSummary(
+            categorySyncId: 'cat_kuliner',
+            categoryName: 'Kuliner & Jajan 🍜🍣🍔',
+            categoryIcon: 'restaurant',
+            categoryColor: 0xFFFF5722,
+            totalAmount: 2500000,
+            percentage: 100.0,
+          ),
+        ],
+        categoryIncomes: const [
+          CategoryExpenseSummary(
+            categorySyncId: 'cat_gaji',
+            categoryName: 'Pendapatan Tetap 💵💎',
+            categoryIcon: 'attach_money',
+            categoryColor: 0xFF4CAF50,
+            totalAmount: 10000000,
+            percentage: 100.0,
+          ),
+        ],
+      );
+
+      final wallet = Wallet()
+        ..id = 1
+        ..syncId = 'wallet_crypto'
+        ..name = 'Tabungan Masa Depan 🚀🌕'
+        ..balance = 7500000
+        ..isActive = true
+        ..isGoal = true;
+
+      final detailedReport = DetailedMonthlyReport(
+        year: 2026,
+        month: 10,
+        userName: 'Abyan 🧑‍💻🔥',
+        summary: summary,
+        wallets: [wallet],
+        transactions: [
+          DetailedTransactionItem(
+            date: DateTime(2026, 10, 20, 18, 30),
+            type: 'EXPENSE',
+            amount: 75000,
+            walletName: 'Tabungan Masa Depan 🚀🌕',
+            categoryName: 'Kuliner & Jajan 🍜🍣🍔',
+            notes: 'Makan malam enak banget! 😋🍛✨',
+          ),
+        ],
+      );
+
+      final Uint8List pdfBytes = await PdfReportService.generatePdf(detailedReport);
+
+      expect(pdfBytes, isNotEmpty);
+      expect(pdfBytes.length, greaterThan(500));
+      final header = String.fromCharCodes(pdfBytes.sublist(0, 5));
+      expect(header, '%PDF-');
+    });
+
     testWidgets('ReportScreen displays Export PDF action button', (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 2.0;
