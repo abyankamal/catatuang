@@ -208,18 +208,49 @@ class BudgetRepository {
     final previousBudgets = await getActiveBudgets(fromYear, fromMonth);
     if (previousBudgets.isEmpty) return 0;
 
-    int copiedCount = 0;
+    // Ambil semua budget yang sudah ada di bulan target untuk cek overwrite/update
+    final targetBudgets = await _isar.budgets
+        .filter()
+        .yearEqualTo(toYear)
+        .and()
+        .monthEqualTo(toMonth)
+        .findAll();
+    final targetBudgetMap = {for (final b in targetBudgets) b.categorySyncId: b};
+
+    final now = DateTime.now();
+    final List<Budget> budgetsToSave = [];
+
     for (final prev in previousBudgets) {
-      await setBudget(
-        categorySyncId: prev.categorySyncId,
-        monthlyLimit: prev.monthlyLimit,
-        year: toYear,
-        month: toMonth,
-      );
-      copiedCount++;
+      if (prev.monthlyLimit <= 0) continue;
+
+      final existing = targetBudgetMap[prev.categorySyncId];
+      if (existing != null) {
+        existing.monthlyLimit = prev.monthlyLimit;
+        existing.isActive = true;
+        existing.updatedAt = now;
+        budgetsToSave.add(existing);
+      } else {
+        final newBudget = Budget()
+          ..syncId = _uuid.v4()
+          ..categorySyncId = prev.categorySyncId
+          ..monthlyLimit = prev.monthlyLimit
+          ..year = toYear
+          ..month = toMonth
+          ..isActive = true
+          ..createdAt = now
+          ..updatedAt = now;
+        budgetsToSave.add(newBudget);
+      }
     }
 
-    return copiedCount;
+    if (budgetsToSave.isEmpty) return 0;
+
+    // Batch persistence in a single database transaction (AGENTS.md & Task 3.2)
+    await _isar.writeTxn(() async {
+      await _isar.budgets.putAll(budgetsToSave);
+    });
+
+    return budgetsToSave.length;
   }
 
   /// Calculate monthly budget progress & category usage off-main-thread (AGENTS.md §5)

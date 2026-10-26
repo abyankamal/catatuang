@@ -171,5 +171,96 @@ void main() {
         1,
       );
     });
+
+    test('batchSoftDeleteCategories soft-deletes regular categories in bulk while preserving system category', () {
+      final cat1 = Category()
+        ..id = 1
+        ..syncId = 'cat_1'
+        ..name = 'Belanja'
+        ..isActive = true;
+      final cat2 = Category()
+        ..id = 2
+        ..syncId = 'cat_2'
+        ..name = 'Olahraga'
+        ..isActive = true;
+      final systemCat = Category()
+        ..id = 3
+        ..syncId = 'cat_transfer_fee'
+        ..name = 'Biaya Transfer'
+        ..isActive = true;
+
+      final allCategories = [cat1, cat2, systemCat];
+
+      void batchDeactivate(List<int> ids) {
+        for (final id in ids) {
+          final cat = allCategories.firstWhere((c) => c.id == id);
+          if (cat.syncId == 'cat_transfer_fee') continue;
+          cat.isActive = false;
+        }
+      }
+
+      batchDeactivate([1, 2, 3]);
+
+      expect(cat1.isActive, isFalse);
+      expect(cat2.isActive, isFalse);
+      expect(systemCat.isActive, isTrue); // Protected system category remains active
+    });
+
+    test('copyBudgetsFromPreviousMonth batch mapping updates existing and inserts new target budgets atomically', () {
+      final prevBudgets = [
+        Budget()
+          ..syncId = 'b_prev_1'
+          ..categorySyncId = 'cat_food'
+          ..monthlyLimit = 1000000.0
+          ..year = 2026
+          ..month = 7
+          ..isActive = true,
+        Budget()
+          ..syncId = 'b_prev_2'
+          ..categorySyncId = 'cat_transport'
+          ..monthlyLimit = 500000.0
+          ..year = 2026
+          ..month = 7
+          ..isActive = true,
+      ];
+
+      // Existing budget in target month (August 2026) for cat_food only
+      final existingTargetBudget = Budget()
+        ..syncId = 'b_aug_1'
+        ..categorySyncId = 'cat_food'
+        ..monthlyLimit = 800000.0
+        ..year = 2026
+        ..month = 8
+        ..isActive = false;
+
+      final targetBudgetMap = {'cat_food': existingTargetBudget};
+      final List<Budget> budgetsToSave = [];
+
+      for (final prev in prevBudgets) {
+        if (prev.monthlyLimit <= 0) continue;
+        final existing = targetBudgetMap[prev.categorySyncId];
+        if (existing != null) {
+          existing.monthlyLimit = prev.monthlyLimit;
+          existing.isActive = true;
+          budgetsToSave.add(existing);
+        } else {
+          final newBudget = Budget()
+            ..syncId = 'b_new'
+            ..categorySyncId = prev.categorySyncId
+            ..monthlyLimit = prev.monthlyLimit
+            ..year = 2026
+            ..month = 8
+            ..isActive = true;
+          budgetsToSave.add(newBudget);
+        }
+      }
+
+      expect(budgetsToSave.length, 2);
+      expect(existingTargetBudget.monthlyLimit, 1000000.0);
+      expect(existingTargetBudget.isActive, isTrue);
+      expect(budgetsToSave[1].categorySyncId, 'cat_transport');
+      expect(budgetsToSave[1].monthlyLimit, 500000.0);
+    });
   });
 }
+

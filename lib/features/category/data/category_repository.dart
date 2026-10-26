@@ -248,4 +248,31 @@ class CategoryRepository {
       await _isar.categorys.put(category);
     });
   }
+
+  /// Batch Soft Delete Kategori (misal saat menyelesaikan Onboarding)
+  /// Mengeksekusi penonaktifan banyak kategori dalam satu transaksi Isar tunggal.
+  Future<void> batchSoftDeleteCategories(List<int> categoryIds) async {
+    if (categoryIds.isEmpty) return;
+
+    final now = DateTime.now();
+    final categoriesToUpdate = <Category>[];
+
+    for (final id in categoryIds) {
+      final category = await _isar.categorys.get(id);
+      if (category == null) continue;
+
+      // Proteksi kategori sistem
+      if (category.syncId == 'cat_transfer_fee') continue;
+
+      category.isActive = false;
+      category.updatedAt = now;
+      categoriesToUpdate.add(category);
+    }
+
+    if (categoriesToUpdate.isEmpty) return;
+
+    await _isar.writeTxn(() async {
+      await _isar.categorys.putAll(categoriesToUpdate);
+    });
+  }
 }

@@ -151,11 +151,13 @@ class OnboardingController extends StateNotifier<OnboardingState> {
         initialBalance: state.initialBalance,
       );
 
-      // 2. Nonaktifkan kategori yang tidak dicentang pengguna
-      for (final cat in state.categories) {
-        if (!state.selectedCategorySyncIds.contains(cat.syncId)) {
-          await categoryRepo.softDeleteCategory(cat.id);
-        }
+      // 2. Nonaktifkan kategori yang tidak dicentang pengguna secara batch (Task 3.2)
+      final unselectedCategoryIds = state.categories
+          .where((cat) => !state.selectedCategorySyncIds.contains(cat.syncId))
+          .map((cat) => cat.id)
+          .toList();
+      if (unselectedCategoryIds.isNotEmpty) {
+        await categoryRepo.batchSoftDeleteCategories(unselectedCategoryIds);
       }
 
       // 3. Simpan Profil & Tandai Onboarding Selesai

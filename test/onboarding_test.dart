@@ -198,6 +198,9 @@ class FakeCategoryRepository implements CategoryRepository {
 
   @override
   Future<void> softDeleteCategory(int id) async {}
+
+  @override
+  Future<void> batchSoftDeleteCategories(List<int> categoryIds) async {}
 }
 
 void main() {
