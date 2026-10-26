@@ -3,7 +3,9 @@ import 'package:catatuang/features/contact/domain/contact.dart';
 import 'package:catatuang/features/contact/presentation/contact_list_screen.dart';
 import 'package:catatuang/features/debt/application/debt_providers.dart';
 import 'package:catatuang/features/debt/domain/debt.dart';
+import 'package:catatuang/features/debt/presentation/debt_form_screen.dart';
 import 'package:catatuang/features/debt/presentation/debt_list_screen.dart';
+import 'package:catatuang/features/debt/presentation/widgets/debt_payment_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -195,6 +197,74 @@ void main() {
       // Historical contact name is preserved on card
       expect(find.text('Siti Rahma (Mantan Rekan)'), findsOneWidget);
       expect(find.text('Piutang Saya'), findsNWidgets(2));
+    });
+
+    testWidgets('DebtFormScreen edit mode normalizes fractional totalAmount to rounded integer string', (tester) async {
+      final existingDebt = Debt()
+        ..id = 3
+        ..syncId = 'debt_3'
+        ..type = 'PAYABLE'
+        ..contactSyncId = 'contact_test'
+        ..title = 'Cicilan Laptop'
+        ..totalAmount = 250000.4
+        ..paidAmount = 0
+        ..startDate = DateTime.now()
+        ..isActive = true
+        ..createdAt = DateTime.now()
+        ..updatedAt = DateTime.now();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            activeContactsStreamProvider.overrideWith((ref) => Stream.value([])),
+            activeRegularWalletsStreamProvider.overrideWith((ref) => Stream.value([])),
+          ],
+          child: MaterialApp(
+            home: DebtFormScreen(existingDebt: existingDebt),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // 250000.4 dibulatkan menjadi 250000
+      expect(find.widgetWithText(TextFormField, '250000'), findsOneWidget);
+    });
+
+    testWidgets('DebtPaymentBottomSheet _setFullPayment normalizes fractional remaining to rounded integer string', (tester) async {
+      final debtWithFraction = Debt()
+        ..id = 4
+        ..syncId = 'debt_4'
+        ..type = 'PAYABLE'
+        ..title = 'Utang Toko'
+        ..totalAmount = 150000.5
+        ..paidAmount = 0
+        ..startDate = DateTime.now()
+        ..isActive = true
+        ..createdAt = DateTime.now()
+        ..updatedAt = DateTime.now();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            activeRegularWalletsStreamProvider.overrideWith((ref) => Stream.value([])),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: DebtPaymentBottomSheet(debt: debtWithFraction),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // Tap 'Bayar Lunas'
+      await tester.tap(find.text('Bayar Lunas'));
+      await tester.pump();
+
+      // 150000.5 dibulatkan menjadi 150001
+      expect(find.widgetWithText(TextFormField, '150001'), findsOneWidget);
     });
   });
 }

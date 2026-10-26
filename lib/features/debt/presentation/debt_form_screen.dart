@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -50,9 +51,7 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
       _selectedType = d.type;
       _titleController = TextEditingController(text: d.title);
       _amountController = TextEditingController(
-        text: d.totalAmount.toInt() == d.totalAmount
-            ? d.totalAmount.toInt().toString()
-            : d.totalAmount.toString(),
+        text: d.totalAmount.round().toString(),
       );
       _notesController = TextEditingController(text: d.notes ?? '');
       _startDate = d.startDate;
@@ -390,6 +389,7 @@ class _DebtFormScreenState extends ConsumerState<DebtFormScreen> {
                     TextFormField(
                       controller: _amountController,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,

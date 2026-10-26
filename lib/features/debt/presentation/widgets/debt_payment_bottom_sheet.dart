@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -70,9 +71,7 @@ class _DebtPaymentBottomSheetState extends ConsumerState<DebtPaymentBottomSheet>
 
   void _setFullPayment() {
     setState(() {
-      _amountController.text = remaining.toInt() == remaining
-          ? remaining.toInt().toString()
-          : remaining.toString();
+      _amountController.text = remaining.round().toString();
     });
   }
 
@@ -292,6 +291,7 @@ class _DebtPaymentBottomSheetState extends ConsumerState<DebtPaymentBottomSheet>
                 TextFormField(
                   controller: _amountController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

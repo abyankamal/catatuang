@@ -1,6 +1,7 @@
 import 'package:catatuang/features/dashboard/application/dashboard_providers.dart';
 import 'package:catatuang/features/goal/application/goal_providers.dart';
 import 'package:catatuang/features/transaction/application/transaction_controller.dart';
+import 'package:catatuang/features/transaction/domain/transaction.dart';
 import 'package:catatuang/features/transaction/presentation/add_transaction_screen.dart';
 import 'package:catatuang/features/wallet/domain/wallet.dart';
 import 'package:flutter/material.dart';
@@ -85,6 +86,47 @@ void main() {
       expect(isAmountValid(double.nan), isFalse);
       expect(isAmountValid(double.infinity), isFalse);
       expect(isAmountValid(double.negativeInfinity), isFalse);
+    });
+
+    testWidgets('AddTransactionScreen edit mode normalizes decimal amount to rounded integer string', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final wallet = Wallet()
+        ..id = 1
+        ..syncId = 'w_1'
+        ..name = 'Dompet Utama'
+        ..balance = 500000
+        ..isActive = true
+        ..isGoal = false;
+
+      final existingTx = Transaction()
+        ..id = 10
+        ..syncId = 'tx_10'
+        ..amount = 150000.5 // fractional amount
+        ..type = 'EXPENSE'
+        ..walletSyncId = 'w_1'
+        ..date = DateTime.now();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            activeRegularWalletsStreamProvider.overrideWith((ref) => Stream.value([wallet])),
+            activeCategoriesStreamProvider.overrideWith((ref) => Stream.value([])),
+            transactionControllerProvider.overrideWith((ref) => FakeTransactionController()),
+          ],
+          child: MaterialApp(
+            home: AddTransactionScreen(existingTransaction: existingTx),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // Memastikan nilai amount 150000.5 dibulatkan menjadi 150001 tanpa titik desimal
+      final amountFinder = find.widgetWithText(TextFormField, '150001');
+      expect(amountFinder, findsOneWidget);
     });
   });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -54,9 +55,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _selectedType = tx.type == 'TRANSFER_OUT' || tx.type == 'TRANSFER_IN'
           ? 'TRANSFER'
           : tx.type;
-      _amountController.text = tx.amount.toInt() == tx.amount
-          ? tx.amount.toInt().toString()
-          : tx.amount.toString();
+      _amountController.text = tx.amount.round().toString();
       _descriptionController.text = tx.description ?? '';
       _selectedDate = tx.date;
       _selectedWalletSyncId = tx.walletSyncId;
@@ -451,6 +450,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     TextFormField(
                       controller: _amountController,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -1033,6 +1033,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         TextFormField(
           controller: _adminFeeController,
           keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           style: GoogleFonts.jetBrainsMono(
             fontSize: 16,
             fontWeight: FontWeight.w600,
