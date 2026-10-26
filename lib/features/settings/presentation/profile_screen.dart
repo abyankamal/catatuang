@@ -8,6 +8,7 @@ import '../../../core/utils/date_formatter.dart';
 import '../../auth/presentation/pin_lock_screen.dart';
 import '../../backup/data/backup_restore_service.dart';
 import '../../dashboard/application/dashboard_providers.dart';
+import '../../transaction/application/recurring_transaction_controller.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -347,6 +348,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ref.invalidate(activeWalletsStreamProvider);
         ref.invalidate(recentTransactionsStreamProvider);
         ref.invalidate(dashboardSummaryProvider);
+        ref.invalidate(recurringTransactionListStreamProvider);
+        ref.invalidate(activeRecurringStreamProvider);
+        ref.invalidate(dueManualRecurringProvider);
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -405,6 +409,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ref.invalidate(recentTransactionsStreamProvider);
         ref.invalidate(dashboardSummaryProvider);
         ref.invalidate(appSettingsStreamProvider);
+        ref.invalidate(recurringTransactionListStreamProvider);
+        ref.invalidate(activeRecurringStreamProvider);
+        ref.invalidate(dueManualRecurringProvider);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
