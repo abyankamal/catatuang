@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/icon_mapper.dart';
 import '../domain/category.dart';
 import '../application/category_providers.dart';
 
@@ -31,12 +32,7 @@ class _CategoryFormScreenState extends ConsumerState<CategoryFormScreen> {
   bool _isLoading = false;
   bool get isEditMode => widget.existingCategory != null;
 
-  final List<String> _availableIcons = [
-    'restaurant', 'directions_car', 'shopping_bag', 'receipt',
-    'payments', 'card_giftcard', 'trending_up', 'pets',
-    'home', 'movie', 'fitness_center', 'medical_services',
-    'school', 'category'
-  ];
+  final List<String> _availableIcons = AppIconMapper.availableCategoryIcons;
 
   final List<int> _availableColors = [
     0xFFEF4444, // Red
@@ -64,27 +60,6 @@ class _CategoryFormScreenState extends ConsumerState<CategoryFormScreen> {
   void dispose() {
     _nameController.dispose();
     super.dispose();
-  }
-
-  IconData _getIconData(String iconName) {
-    switch (iconName) {
-      case 'restaurant': return Icons.restaurant;
-      case 'directions_car': return Icons.directions_car;
-      case 'shopping_bag': return Icons.shopping_bag;
-      case 'receipt': return Icons.receipt;
-      case 'swap_horiz': return Icons.swap_horiz;
-      case 'payments': return Icons.payments;
-      case 'card_giftcard': return Icons.card_giftcard;
-      case 'trending_up': return Icons.trending_up;
-      case 'pets': return Icons.pets;
-      case 'home': return Icons.home;
-      case 'movie': return Icons.movie;
-      case 'fitness_center': return Icons.fitness_center;
-      case 'medical_services': return Icons.medical_services;
-      case 'school': return Icons.school;
-      case 'category': return Icons.category;
-      default: return Icons.category;
-    }
   }
 
   Future<void> _submit() async {
@@ -261,7 +236,7 @@ class _CategoryFormScreenState extends ConsumerState<CategoryFormScreen> {
                               : Border.all(color: Colors.grey.shade200),
                         ),
                         child: Icon(
-                          _getIconData(iconName),
+                          AppIconMapper.getCategoryIcon(iconName),
                           color: isSelected ? Color(_selectedColor) : Colors.grey.shade600,
                         ),
                       ),

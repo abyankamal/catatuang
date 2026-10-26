@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/icon_mapper.dart';
 import '../../auth/presentation/pin_lock_screen.dart';
 import '../../backup/data/backup_restore_service.dart';
 import '../../dashboard/application/dashboard_providers.dart';
@@ -23,16 +24,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String _selectedAvatar = 'person';
   bool _isLoading = false;
 
-  final List<Map<String, dynamic>> _avatarOptions = [
-    {'id': 'person', 'icon': Icons.person_rounded},
-    {'id': 'face', 'icon': Icons.face_rounded},
-    {'id': 'account_circle', 'icon': Icons.account_circle_rounded},
-    {'id': 'work', 'icon': Icons.work_rounded},
-    {'id': 'savings', 'icon': Icons.savings_rounded},
-    {'id': 'pets', 'icon': Icons.pets_rounded},
-    {'id': 'star', 'icon': Icons.star_rounded},
-    {'id': 'emoji_emotions', 'icon': Icons.emoji_emotions_rounded},
-  ];
+  final List<Map<String, dynamic>> _avatarOptions = AppIconMapper.avatarOptions;
 
   @override
   void initState() {
@@ -437,14 +429,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  IconData _getIconData(String iconName) {
-    final found = _avatarOptions.firstWhere(
-      (opt) => opt['id'] == iconName,
-      orElse: () => _avatarOptions.first,
-    );
-    return found['icon'] as IconData;
-  }
-
   @override
   Widget build(BuildContext context) {
     final settingsAsync = ref.watch(appSettingsStreamProvider);
@@ -500,7 +484,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ],
                     ),
                     child: Icon(
-                      _getIconData(_selectedAvatar),
+                      AppIconMapper.getAvatarIcon(_selectedAvatar),
                       size: 48,
                       color: Colors.white,
                     ),

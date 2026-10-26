@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/icon_mapper.dart';
 import '../../../category/domain/category.dart';
 import '../../../transaction/domain/transaction.dart';
 
@@ -57,7 +58,9 @@ class TransactionListTile extends StatelessWidget {
     }
 
     final categoryName = category?.name ?? (transaction.type.contains('TRANSFER') ? 'Transfer' : 'Lainnya');
-    final iconData = _getIconData(category?.icon) ?? defaultIcon;
+    final iconData = category != null
+        ? AppIconMapper.getCategoryIcon(category!.icon)
+        : defaultIcon;
     final isCategoryActive = category?.isActive ?? true;
 
     return Container(
@@ -173,29 +176,5 @@ class TransactionListTile extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  IconData? _getIconData(String? iconName) {
-    if (iconName == null) return null;
-    switch (iconName) {
-      case 'restaurant':
-        return Icons.restaurant;
-      case 'directions_car':
-        return Icons.directions_car;
-      case 'shopping_bag':
-        return Icons.shopping_bag;
-      case 'receipt':
-        return Icons.receipt;
-      case 'swap_horiz':
-        return Icons.swap_horiz;
-      case 'payments':
-        return Icons.payments;
-      case 'card_giftcard':
-        return Icons.card_giftcard;
-      case 'trending_up':
-        return Icons.trending_up;
-      default:
-        return Icons.category;
-    }
   }
 }

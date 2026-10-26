@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/icon_mapper.dart';
 import '../domain/category.dart';
 import '../application/category_providers.dart';
 
@@ -171,7 +172,7 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> with Si
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
-                _getIconData(category.icon),
+                AppIconMapper.getCategoryIcon(category.icon),
                 color: Color(category.colorValue),
                 size: 24,
               ),
@@ -199,9 +200,9 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> with Si
                   value: 'edit',
                   child: Row(
                     children: [
-                      const Icon(Icons.edit_outlined, size: 18, color: Colors.blue),
-                      const SizedBox(width: 8),
-                      Text('Edit', style: GoogleFonts.outfit()),
+                       const Icon(Icons.edit_outlined, size: 18, color: Colors.blue),
+                       const SizedBox(width: 8),
+                       Text('Edit', style: GoogleFonts.outfit()),
                     ],
                   ),
                 ),
@@ -209,9 +210,9 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> with Si
                   value: 'delete',
                   child: Row(
                     children: [
-                      const Icon(Icons.delete_outline, size: 18, color: AppColors.expense),
-                      const SizedBox(width: 8),
-                      Text('Hapus', style: GoogleFonts.outfit(color: AppColors.expense)),
+                       const Icon(Icons.delete_outline, size: 18, color: AppColors.expense),
+                       const SizedBox(width: 8),
+                       Text('Hapus', style: GoogleFonts.outfit(color: AppColors.expense)),
                     ],
                   ),
                 ),
@@ -221,27 +222,5 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> with Si
         );
       },
     );
-  }
-
-  IconData _getIconData(String iconName) {
-    // Basic mapping for preview, you can expand this or use a package
-    switch (iconName) {
-      case 'restaurant': return Icons.restaurant;
-      case 'directions_car': return Icons.directions_car;
-      case 'shopping_bag': return Icons.shopping_bag;
-      case 'receipt': return Icons.receipt;
-      case 'swap_horiz': return Icons.swap_horiz;
-      case 'payments': return Icons.payments;
-      case 'card_giftcard': return Icons.card_giftcard;
-      case 'trending_up': return Icons.trending_up;
-      case 'pets': return Icons.pets;
-      case 'home': return Icons.home;
-      case 'movie': return Icons.movie;
-      case 'fitness_center': return Icons.fitness_center;
-      case 'medical_services': return Icons.medical_services;
-      case 'school': return Icons.school;
-      case 'category': return Icons.category;
-      default: return Icons.category;
-    }
   }
 }

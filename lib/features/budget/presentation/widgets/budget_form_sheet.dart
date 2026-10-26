@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/icon_mapper.dart';
 import '../../../dashboard/application/dashboard_providers.dart';
 import '../../application/budget_providers.dart';
 import '../../data/budget_repository.dart';
@@ -45,45 +46,6 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
   void dispose() {
     _amountController.dispose();
     super.dispose();
-  }
-
-  IconData _getIconData(String iconName) {
-    switch (iconName) {
-      case 'restaurant':
-      case 'food':
-        return Icons.restaurant_rounded;
-      case 'directions_car':
-      case 'transport':
-        return Icons.directions_car_rounded;
-      case 'shopping_bag':
-      case 'shopping':
-        return Icons.shopping_bag_rounded;
-      case 'movie':
-      case 'entertainment':
-        return Icons.movie_rounded;
-      case 'receipt_long':
-      case 'bills':
-        return Icons.receipt_long_rounded;
-      case 'medical_services':
-      case 'health':
-        return Icons.medical_services_rounded;
-      case 'school':
-      case 'education':
-        return Icons.school_rounded;
-      case 'card_giftcard':
-      case 'gift':
-        return Icons.card_giftcard_rounded;
-      case 'work':
-      case 'salary':
-        return Icons.work_rounded;
-      case 'trending_up':
-      case 'investment':
-        return Icons.trending_up_rounded;
-      case 'account_balance_wallet':
-        return Icons.account_balance_wallet_rounded;
-      default:
-        return Icons.category_rounded;
-    }
   }
 
   Future<void> _submit() async {
@@ -244,7 +206,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
-                            _getIconData(widget.existingUsage!.categoryIcon),
+                            AppIconMapper.getCategoryIcon(widget.existingUsage!.categoryIcon),
                             color: Color(widget.existingUsage!.categoryColor),
                             size: 20,
                           ),
@@ -295,7 +257,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                _getIconData(cat.icon),
+                                AppIconMapper.getCategoryIcon(cat.icon),
                                 color: Color(cat.colorValue),
                                 size: 16,
                               ),

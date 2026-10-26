@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/icon_mapper.dart';
 import '../../data/budget_repository.dart';
 
 class BudgetCard extends StatelessWidget {
@@ -16,45 +17,6 @@ class BudgetCard extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
   });
-
-  IconData _getIconData(String iconName) {
-    switch (iconName) {
-      case 'restaurant':
-      case 'food':
-        return Icons.restaurant_rounded;
-      case 'directions_car':
-      case 'transport':
-        return Icons.directions_car_rounded;
-      case 'shopping_bag':
-      case 'shopping':
-        return Icons.shopping_bag_rounded;
-      case 'movie':
-      case 'entertainment':
-        return Icons.movie_rounded;
-      case 'receipt_long':
-      case 'bills':
-        return Icons.receipt_long_rounded;
-      case 'medical_services':
-      case 'health':
-        return Icons.medical_services_rounded;
-      case 'school':
-      case 'education':
-        return Icons.school_rounded;
-      case 'card_giftcard':
-      case 'gift':
-        return Icons.card_giftcard_rounded;
-      case 'work':
-      case 'salary':
-        return Icons.work_rounded;
-      case 'trending_up':
-      case 'investment':
-        return Icons.trending_up_rounded;
-      case 'account_balance_wallet':
-        return Icons.account_balance_wallet_rounded;
-      default:
-        return Icons.category_rounded;
-    }
-  }
 
   Color _getStatusColor(BudgetStatus status) {
     switch (status) {
@@ -113,7 +75,7 @@ class BudgetCard extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  _getIconData(usage.categoryIcon),
+                  AppIconMapper.getCategoryIcon(usage.categoryIcon),
                   color: Color(usage.categoryColor),
                   size: 20,
                 ),

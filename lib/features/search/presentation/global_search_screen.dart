@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/icon_mapper.dart';
 import '../../wallet/domain/wallet.dart';
 import '../application/search_providers.dart';
 import '../data/search_repository.dart';
@@ -33,49 +34,6 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
-  }
-
-  IconData _getIconData(String? iconName) {
-    switch (iconName) {
-      case 'restaurant':
-      case 'food':
-        return Icons.restaurant_rounded;
-      case 'directions_car':
-      case 'transport':
-        return Icons.directions_car_rounded;
-      case 'shopping_bag':
-      case 'shopping':
-        return Icons.shopping_bag_rounded;
-      case 'movie':
-      case 'entertainment':
-        return Icons.movie_rounded;
-      case 'receipt_long':
-      case 'bills':
-        return Icons.receipt_long_rounded;
-      case 'medical_services':
-      case 'health':
-        return Icons.medical_services_rounded;
-      case 'school':
-      case 'education':
-        return Icons.school_rounded;
-      case 'card_giftcard':
-      case 'gift':
-        return Icons.card_giftcard_rounded;
-      case 'work':
-      case 'salary':
-        return Icons.work_rounded;
-      case 'trending_up':
-      case 'investment':
-        return Icons.trending_up_rounded;
-      case 'account_balance_wallet':
-        return Icons.account_balance_wallet_rounded;
-      case 'swap_horiz':
-        return Icons.swap_horiz_rounded;
-      case 'savings':
-        return Icons.savings_rounded;
-      default:
-        return Icons.category_rounded;
-    }
   }
 
   @override
@@ -444,7 +402,7 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isTransfer ? Icons.swap_horiz_rounded : _getIconData(item.category?.icon),
+              isTransfer ? Icons.swap_horiz_rounded : AppIconMapper.getCategoryIcon(item.category?.icon),
               color: Color(item.category?.colorValue ?? 0xFF5D5CFF),
               size: 20,
             ),
