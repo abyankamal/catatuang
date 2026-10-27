@@ -4,7 +4,6 @@ import 'package:catatuang/features/transaction/application/recurring_transaction
 import 'package:catatuang/features/transaction/data/recurring_transaction_repository.dart';
 import 'package:catatuang/features/transaction/domain/recurring_transaction.dart';
 import 'package:catatuang/features/transaction/presentation/recurring_transaction_list_screen.dart';
-import 'package:catatuang/features/transaction/presentation/widgets/recurring_tile.dart';
 import 'package:catatuang/features/wallet/domain/wallet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

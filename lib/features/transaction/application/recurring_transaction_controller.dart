@@ -20,8 +20,8 @@ final activeRecurringStreamProvider = StreamProvider<List<RecurringTransaction>>
 
 /// Provider daftar transaksi berulang yang jatuh tempo (membutuhkan konfirmasi manual)
 final dueManualRecurringProvider = FutureProvider<List<RecurringTransaction>>((ref) async {
-  // Listen to active stream so it updates when a recurring transaction is executed, skipped, or updated
-  ref.listen(activeRecurringStreamProvider, (_, _) => ref.invalidateSelf());
+  // Watch active stream so it automatically recomputes when a recurring transaction is modified in Isar
+  ref.watch(activeRecurringStreamProvider);
   final repo = ref.watch(recurringTransactionRepositoryProvider);
   final now = DateTime.now();
   final allDue = await repo.getDueRecurring(RecurringScheduleHelper.endOfDay(now));

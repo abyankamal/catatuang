@@ -120,98 +120,98 @@ class RecurringTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Row 1: Badges & Status
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const NeverScrollableScrollPhysics(),
-              child: Row(
+            Row(
               children: [
-                // Type Badge
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: typeColor.withAlpha(20),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Icon(typeIcon, size: 13, color: typeColor),
-                      const SizedBox(width: 4),
-                      Text(
-                        typeLabel,
-                        style: GoogleFonts.manrope(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: typeColor,
+                      // Type Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: typeColor.withAlpha(20),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(typeIcon, size: 13, color: typeColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              typeLabel,
+                              style: GoogleFonts.manrope(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: typeColor,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
 
-                // Frequency Badge
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    frequencyLabel,
-                    style: GoogleFonts.manrope(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-
-                // Execution Mode Badge (Otomatis vs Manual)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: recurring.autoExecute
-                        ? AppColors.primary.withAlpha(15)
-                        : Colors.orange.withAlpha(15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        recurring.autoExecute
-                            ? Icons.bolt_rounded
-                            : Icons.touch_app_rounded,
-                        size: 13,
-                        color: recurring.autoExecute
-                            ? AppColors.primary
-                            : Colors.orange.shade800,
+                      // Frequency Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          frequencyLabel,
+                          style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        recurring.autoExecute ? 'Otomatis' : 'Manual',
-                        style: GoogleFonts.manrope(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+
+                      // Execution Mode Badge (Otomatis vs Manual)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
                           color: recurring.autoExecute
-                              ? AppColors.primary
-                              : Colors.orange.shade800,
+                              ? AppColors.primary.withAlpha(15)
+                              : Colors.orange.withAlpha(15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              recurring.autoExecute
+                                  ? Icons.bolt_rounded
+                                  : Icons.touch_app_rounded,
+                              size: 13,
+                              color: recurring.autoExecute
+                                  ? AppColors.primary
+                                  : Colors.orange.shade800,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              recurring.autoExecute ? 'Otomatis' : 'Manual',
+                              style: GoogleFonts.manrope(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: recurring.autoExecute
+                                    ? AppColors.primary
+                                    : Colors.orange.shade800,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
 
                 // Status Badge
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: statusBg,
                     borderRadius: BorderRadius.circular(8),
@@ -226,7 +226,6 @@ class RecurringTile extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
             ),
             const SizedBox(height: 12),
 
