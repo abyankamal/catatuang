@@ -340,17 +340,18 @@ void main() {
   });
 
   group('GoalController Operations & State Tests (Task 4.1)', () {
-    test('topUpGoal sets loading and data(null) state on success', () async {
+    test('topUpGoal sets loading and data(null) state and returns true on success', () async {
       final states = <AsyncValue<void>>[];
       controller.addListener((state) => states.add(state));
 
-      await controller.topUpGoal(
+      final success = await controller.topUpGoal(
         goalWalletSyncId: 'goal_1',
         sourceWalletSyncId: 'wallet_source',
         amount: 250000,
         date: DateTime(2026, 10, 25),
       );
 
+      expect(success, isTrue);
       expect(txRepo.allocateSavingsCalled, isTrue);
       expect(txRepo.lastGoalSyncId, 'goal_1');
       expect(txRepo.lastSourceSyncId, 'wallet_source');
@@ -359,16 +360,17 @@ void main() {
       expect(states.any((s) => s is AsyncLoading), isTrue);
     });
 
-    test('topUpGoal catches error and sets state to error', () async {
+    test('topUpGoal catches error, sets state to error, and returns false on failure', () async {
       txRepo.shouldThrowOnAllocate = true;
 
-      await controller.topUpGoal(
+      final success = await controller.topUpGoal(
         goalWalletSyncId: 'goal_1',
         sourceWalletSyncId: 'wallet_source',
         amount: 100000,
         date: DateTime(2026, 10, 25),
       );
 
+      expect(success, isFalse);
       expect(controller.state.hasError, isTrue);
       expect(controller.state.error.toString(), contains('Gagal alokasi tabungan'));
     });

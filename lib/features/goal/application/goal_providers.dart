@@ -91,7 +91,7 @@ class GoalController extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  Future<void> topUpGoal({
+  Future<bool> topUpGoal({
     required String goalWalletSyncId,
     required String sourceWalletSyncId,
     required double amount,
@@ -106,8 +106,10 @@ class GoalController extends StateNotifier<AsyncValue<void>> {
         date: date,
       );
       state = const AsyncValue.data(null);
+      return true;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+      return false;
     }
   }
 

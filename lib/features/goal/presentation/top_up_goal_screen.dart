@@ -41,7 +41,7 @@ class _TopUpGoalScreenState extends ConsumerState<TopUpGoalScreen> {
     final amount = double.tryParse(_amountController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0.0;
 
     try {
-      await ref.read(goalControllerProvider.notifier).topUpGoal(
+      final success = await ref.read(goalControllerProvider.notifier).topUpGoal(
         goalWalletSyncId: widget.goalId,
         sourceWalletSyncId: _selectedWallet!.syncId,
         amount: amount,
@@ -49,15 +49,34 @@ class _TopUpGoalScreenState extends ConsumerState<TopUpGoalScreen> {
       );
       
       if (mounted) {
-        context.pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Berhasil menabung!')),
-        );
+        if (success) {
+          context.pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Berhasil menabung!'),
+              backgroundColor: AppColors.income,
+            ),
+          );
+        } else {
+          final error = ref.read(goalControllerProvider).error;
+          final errorMessage = error != null
+              ? error.toString().replaceFirst(RegExp(r'^Exception:\s*'), '')
+              : 'Terjadi kesalahan saat menabung';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: AppColors.expense,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal: $e')),
+          SnackBar(
+            content: Text('Gagal: $e'),
+            backgroundColor: AppColors.expense,
+          ),
         );
       }
     } finally {
